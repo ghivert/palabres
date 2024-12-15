@@ -2,9 +2,15 @@
 
 -export([configure/1, format/2, format_iso8601/0, log/3, uuid/0, is_json/0, is_color/0]).
 
--include_lib("palabre/include/palabre_Options.hrl").
+-include_lib("palabre/include/palabre@options_Options.hrl").
 
-configure(#options{level = Level, json = Json, color = Clr}) ->
+configure(#options{
+  level = Level,
+  json = Json,
+  color = Clr,
+  output = Output,
+  style_default = StyleDefault
+}) ->
   persistent_term:put(json, Json),
   Color = read_color(Clr),
   persistent_term:put(color, Color),
@@ -15,9 +21,47 @@ configure(#options{level = Level, json = Json, color = Clr}) ->
       [{domain, {fun logger_filters:domain/2, {stop, sub, [otp, sasl]}}},
        {domain, {fun logger_filters:domain/2, {stop, sub, [supervisor_report]}}}],
     metadata => #{}}),
-  logger:update_handler_config(default,
-    #{formatter => {palabre_ffi, #{color => Color, json => Json}}}),
+  logger:add_handler(palabre_logger, logger_std_h,
+    #{formatter => {palabre_ffi, #{color => Color, json => Json}},
+      filters => [{palabre_filter, {fun handler_filter/2, continue}}],
+      config => configure_output(Output)}),
+  case StyleDefault of
+    false ->
+      erlang:display("there?"),
+      logger:update_handler_config(default,
+      #{filters => [{palabre_filter, {fun handler_filter/2, ignore}}]});
+    true ->
+      logger:update_handler_config(default,
+        #{formatter => {palabre_ffi, #{color => Color, json => Json}},
+          filters => [{palabre_filter, {fun handler_filter/2, ignore}}]})
+  end,
   nil.
+
+configure_output(Output) ->
+  case Output of
+    stdout -> #{type => standard_io};
+    {file, FileName, Interval} ->
+      #{file => unicode:characters_to_list(FileName),
+        filesync_repeat_interval =>
+          case Interval of
+            {some, Millis} -> Millis;
+            none -> 5000
+          end}
+  end.
+
+handler_filter(Event, Extra) ->
+  case Event of
+    #{msg := {report, [{palabre, _Fields, _Text}]}} ->
+      case Extra of
+        ignore -> ignore;
+        continue -> Event
+      end;
+    _ ->
+      case Extra of
+        ignore -> Event;
+        continue -> ignore
+      end
+  end.
 
 read_color(Color) ->
   case Color of
@@ -36,7 +80,8 @@ read_variable(Name, Default) ->
   end.
 
 log(Level, Msg, Text) ->
-  logger:log(Level, [{palabre, Msg, Text}]).
+  logger:log(Level, [{palabre, Msg, Text}]),
+  nil.
 
 format(#{level := Level, msg := Msg, meta := _Meta}, #{json := Json, color := Color}) ->
   case Json of

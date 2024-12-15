@@ -1,0 +1,5 @@
+---
+version: 1.2.4
+title: should format logger message when asked
+---
+[32mlevel[31m=[1;36mdebg[0m [1mTest message[0m

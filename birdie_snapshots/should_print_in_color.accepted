@@ -1,0 +1,6 @@
+---
+version: 1.2.4
+title: should print in color
+---
+[32mlevel[31m=[1;36mdebg[0m [32mtest_field1[33m=[0mtest_value1[33m,[0mtest_value2 [32mtest_field2[33m=[0mtest_value1 [1mDebug testing message[0m
+[32mlevel[31m=[1;34minfo[0m [32mtest_field1[33m=[0mtest_value1[33m,[0mtest_value2 [32mtest_field2[33m=[0mtest_value1 [1mInfo testing message[0m

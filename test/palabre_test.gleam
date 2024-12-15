@@ -1,12 +1,72 @@
-import gleeunit
-import gleeunit/should
+import birdie
+import gleam/erlang/process
+import palabre
+import palabre/level.{Debug, Info}
+import palabre/options
+import palabre/test_utils
+import startest.{describe}
+import wisp
 
 pub fn main() {
-  gleeunit.main()
+  startest.default_config()
+  |> startest.run
 }
 
-// gleeunit test functions end in `_test`
-pub fn hello_world_test() {
-  1
-  |> should.equal(1)
+fn configure_logger(
+  color color: Bool,
+  json json: Bool,
+  level level: level.Level,
+) -> Nil {
+  options.default()
+  |> options.color(color)
+  |> options.json(json)
+  |> options.level(level)
+  |> options.output(to: {
+    options.file(test_utils.log_file)
+    |> options.flush(every: 10)
+  })
+  |> options.style_default_logger(True)
+  |> palabre.configure
+}
+
+fn messages() {
+  // Print a debug message, should be displayed almost every time while
+  // log level, because log level should be Debug almost every time in tests.
+  palabre.debug("Debug testing message")
+  |> palabre.string("test_field1", "test_value1")
+  |> palabre.string("test_field1", "test_value2")
+  |> palabre.string("test_field2", "test_value1")
+  |> palabre.dump
+
+  // Print an info message, that should be display every time.
+  palabre.info("Info testing message")
+  |> palabre.string("test_field1", "test_value1")
+  |> palabre.string("test_field1", "test_value2")
+  |> palabre.string("test_field2", "test_value1")
+  |> palabre.dump
+}
+
+fn it(title: String, color, json, level, run_test: fn() -> Nil) {
+  startest.it(title, fn() {
+    configure_logger(color, json, level)
+    run_test()
+    process.sleep(100)
+    let content = test_utils.read_logs()
+    test_utils.remove_logs()
+    test_utils.destroy_logger()
+    birdie.snap(title:, content:)
+  })
+}
+
+pub fn palabre_tests() {
+  describe("palabre", [
+    it("should print in color", True, False, Debug, messages),
+    it("should print without color", False, False, Debug, messages),
+    it("should print in JSON", False, True, Debug, messages),
+    it("should print in JSON and ignore color", True, True, Debug, messages),
+    it("should ignore low levels", True, True, Info, messages),
+    it("should format logger message when asked", True, False, Debug, fn() {
+      wisp.log_debug("Test message")
+    }),
+  ])
 }

@@ -1,0 +1,6 @@
+---
+version: 1.2.4
+title: should print in JSON and ignore color
+---
+{"level":"debug","message":"Debug testing message","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
+{"level":"info","message":"Info testing message","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
