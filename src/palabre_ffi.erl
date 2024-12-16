@@ -115,7 +115,7 @@ format_msg(Report0, #{json := Json}) ->
         true -> maps:put("id", uuid(), maps:put("when", format_iso8601(), json_wrap([$\s, Msg])));
         false ->
           Defaults = [{<<"when"/utf8>>, [format_iso8601()]}, {<<"id"/utf8>>, [uuid()]}],
-          Converted = palabre@internals@converter:format_fields(Defaults),
+          Converted = palabre@internals@converter:to_spaced_query_string(Defaults),
           case is_color() of
             false -> json_wrap([$\s, Converted, $\s, Msg]);
             true -> json_wrap([$\s, Converted, $\s, "\x1b[1m", Msg, "\x1b[0m"])
@@ -124,8 +124,8 @@ format_msg(Report0, #{json := Json}) ->
     {report, [{palabre, Fields, Text}]} ->
       Fields1 = [{<<"when"/utf8>>, [format_iso8601()]}, {<<"id"/utf8>>, [uuid()]} | Fields],
       case Json of
-        false -> [$\s, palabre@internals@converter:format_fields(Fields1), $\s, Text];
-        true -> palabre@internals@converter:format_json(Fields1, Text)
+        false -> [$\s, palabre@internals@converter:to_spaced_query_string(Fields1), $\s, Text];
+        true -> palabre@internals@converter:to_json(Fields1, Text)
       end;
     {report, Report1} when is_map(Report1) -> json_wrap(format_kv(maps:to_list(Report1)));
     {report, Report1} when is_list(Report1) -> json_wrap(format_kv(Report1));

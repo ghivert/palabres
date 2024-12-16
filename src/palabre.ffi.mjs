@@ -1,5 +1,3 @@
-import * as options from './palabre/options.mjs'
-import * as level from './palabre/level.mjs'
 import * as converter from './palabre/internals/converter.mjs'
 import * as gleam from './gleam.mjs'
 import * as levels from './palabre_level.ffi.mjs'
@@ -79,12 +77,13 @@ class Logger {
     const when = ['when', gleam.List.fromArray([formatIso8601()])]
     const fields = gleam.prepend(when, gleam.prepend(id, message))
     if (isJson()) return this.#formatJSON(lvl, fields, text)
-    return `${levels.format(lvl, this.color)} ${converter.format_fields(fields)} ${text}`
+    const fields_ = converter.to_spaced_query_string(fields)
+    return `${levels.format(lvl, this.color)} ${fields_} ${text}`
   }
 
   #formatJSON(lvl, fields, text) {
     const data = converter
-      .format_json(fields, text)
+      .to_json(fields, text)
       .entries()
       .map(([key, value]) => [key, value.toArray?.() ?? value])
     const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
