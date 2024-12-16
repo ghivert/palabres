@@ -27,7 +27,6 @@ configure(#options{
       config => configure_output(Output)}),
   case StyleDefault of
     false ->
-      erlang:display("there?"),
       logger:update_handler_config(default,
       #{filters => [{palabre_filter, {fun handler_filter/2, ignore}}]});
     true ->

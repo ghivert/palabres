@@ -9,10 +9,16 @@ import startest/expect
 pub const log_file = "/tmp/erlang.log"
 
 @external(erlang, "palabre_test_ffi", "destroy")
+@external(javascript, "../palabre.ffi.mjs", "destroy")
 pub fn destroy_logger() -> Nil
 
 @external(erlang, "thoas", "encode")
+@external(javascript, "../palabre.ffi.mjs", "encodeJson")
 fn json_encode(a: a) -> String
+
+@external(erlang, "palabre_test_ffi", "sleep")
+@external(javascript, "../palabre_test.ffi.mjs", "sleep")
+pub fn sleep(timeout: Int, continuation: fn() -> a) -> Nil
 
 fn clean(content: String) {
   case json.decode(content, dynamic.dict(dynamic.string, dynamic.dynamic)) {

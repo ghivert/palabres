@@ -1,6 +1,6 @@
 -module(palabre_test_ffi).
 
--export([destroy/0]).
+-export([destroy/0, sleep/2]).
 
 % Used only for testing purposes.
 destroy() ->
@@ -11,4 +11,9 @@ destroy() ->
         [{remote_gl, {fun logger_filters:remote_gl/2, stop}},
          {domain, {fun logger_filters:domain/2, {log, super, [otp, sasl]}}},
          {no_domain, {fun logger_filters:domain/2, {log, undefined, []}}}]}),
+  nil.
+
+sleep(Timeout, Continuation) ->
+  timer:sleep(Timeout),
+  Continuation(),
   nil.

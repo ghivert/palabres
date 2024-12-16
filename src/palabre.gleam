@@ -10,6 +10,7 @@ import palabre/options.{type Options}
 import wisp.{type Request, type Response}
 
 @external(erlang, "palabre_ffi", "configure")
+@external(javascript, "./palabre.ffi.mjs", "configure")
 pub fn configure(options: Options) -> Nil
 
 pub opaque type Log {
@@ -106,6 +107,7 @@ pub fn dump(log_: Log) -> Nil {
 }
 
 @external(erlang, "palabre_ffi", "log")
+@external(javascript, "./palabre.ffi.mjs", "log")
 fn log(level: level.Level, message: a, text: String) -> Nil
 
 fn init(level: level.Level, message: String) {
