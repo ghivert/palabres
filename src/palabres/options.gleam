@@ -1,12 +1,12 @@
-//// Options to configure Palabre at start.
+//// Options to configure Palabres at start.
 ////
 //// ```gleam
-//// import palabre
-//// import palabre/level
-//// import palabre/options
+//// import palabres
+//// import palabres/level
+//// import palabres/options
 ////
 //// pub fn configure_logger() {
-////   options.default()
+////   options.defaults()
 ////   // Enables or disable colored output.
 ////   |> options.color(True)
 ////   // Enables or disable JSON output. JSON output will never be colored.
@@ -18,15 +18,15 @@
 ////     options.file(test_utils.log_file)
 ////     |> options.flush(every: 5000)
 ////   })
-////   // Applies or not palabre styling to default logger (on stdout).
+////   // Applies or not palabres styling to default logger (on stdout).
 ////   |> options.style_default_logger(True)
 ////   // Configure the logger.
-////   |> palabre.configure
+////   |> palabres.configure
 //// }
 //// ```
 
 import gleam/option.{type Option, None, Some}
-import palabre/level
+import palabres/level
 
 /// Options to configure the logger. To create with [`defaults`](#defaults).
 /// Below are the configurable options, usable with the corresponding functions.
@@ -41,7 +41,7 @@ import palabre/level
 ///   be ignored. Default to `level.Info`.
 /// - [`output`](#output) allow to choose writing to `stdout` or a file. Default to
 ///   `stdout`.
-/// - [`style_default_logger`](#style_default_logger) apply the palabre styling to the default logger.
+/// - [`style_default_logger`](#style_default_logger) apply the palabres styling to the default logger.
 ///   Default to `True`.
 pub opaque type Options {
   Options(
@@ -77,7 +77,13 @@ pub opaque type Output {
   Stdout
 }
 
-pub fn default() -> Options {
+/// Initialise the options with defaults.
+/// - `color: True` if environment variable `NO_COLOR` is unset, `False` otherwise.
+/// - `json: False`
+/// - `level: level.Info`
+/// - `output: stdout`
+/// - `style_default_logger: True`
+pub fn defaults() -> Options {
   Options(
     color: None,
     json: False,
@@ -112,7 +118,7 @@ pub fn output(options: Options, to output: Output) -> Options {
   Options(..options, output:)
 }
 
-/// Activate or deactivate styling from Palabre on default logger. Defaults to
+/// Activate or deactivate styling from Palabres on default logger. Defaults to
 /// `True`. Has no effect on JavaScript, since there's no default logger.
 pub fn style_default_logger(options: Options, style_default: Bool) -> Options {
   Options(..options, style_default:)

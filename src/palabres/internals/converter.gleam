@@ -7,11 +7,11 @@ import gleam/dict
 import gleam/dynamic
 import gleam/list
 import gleam/string
-import palabre/internals/utils
+import palabres/internals/utils
 
 /// Converts a list of fields, to a query string separated by spaces instead
 /// of ampersand (`&`). Handles coloring output, or not, depending on the state
-/// of palabre logger.
+/// of palabres logger.
 pub fn to_spaced_query_string(fields: List(#(String, List(String)))) -> String {
   fields
   |> list.map(to_query_part)

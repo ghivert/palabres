@@ -1,8 +1,9 @@
 import birdie
-import palabre
-import palabre/level.{Debug, Info}
-import palabre/options
-import palabre/test_utils
+import gleam/io
+import palabres
+import palabres/level.{Debug, Info}
+import palabres/options
+import palabres/test_utils
 import startest.{describe}
 
 @target(erlang)
@@ -18,7 +19,7 @@ fn configure_logger(
   json json: Bool,
   level level: level.Level,
 ) -> Nil {
-  options.default()
+  options.defaults()
   |> options.color(color)
   |> options.json(json)
   |> options.level(level)
@@ -27,26 +28,26 @@ fn configure_logger(
     |> options.flush(every: 10)
   })
   |> options.style_default_logger(True)
-  |> palabre.configure
+  |> palabres.configure
 }
 
 fn messages() {
   // Print a debug message, should be displayed almost every time while
   // log level, because log level should be Debug almost every time in tests.
-  palabre.debug("Debug testing message")
-  |> palabre.at("palabre_test", "messages")
-  |> palabre.string("test_field1", "test_value1")
-  |> palabre.string("test_field1", "test_value2")
-  |> palabre.string("test_field2", "test_value1")
-  |> palabre.dump
+  palabres.debug("Debug testing message")
+  |> palabres.at("palabres_test", "messages")
+  |> palabres.string("test_field1", "test_value1")
+  |> palabres.string("test_field1", "test_value2")
+  |> palabres.string("test_field2", "test_value1")
+  |> palabres.log
 
   // Print an info message, that should be display every time.
-  palabre.info("Info testing message")
-  |> palabre.at("palabre_test", "messages")
-  |> palabre.string("test_field1", "test_value1")
-  |> palabre.string("test_field1", "test_value2")
-  |> palabre.string("test_field2", "test_value1")
-  |> palabre.dump
+  palabres.info("Info testing message")
+  |> palabres.at("palabres_test", "messages")
+  |> palabres.string("test_field1", "test_value1")
+  |> palabres.string("test_field1", "test_value2")
+  |> palabres.string("test_field2", "test_value1")
+  |> palabres.log
 }
 
 fn it(title: String, color, json, level, run_test: fn() -> Nil) {
@@ -54,6 +55,7 @@ fn it(title: String, color, json, level, run_test: fn() -> Nil) {
     configure_logger(color, json, level)
     run_test()
     use <- test_utils.sleep(100)
+    io.println("1")
     let content = test_utils.read_logs()
     test_utils.remove_logs()
     test_utils.destroy_logger()
@@ -62,7 +64,7 @@ fn it(title: String, color, json, level, run_test: fn() -> Nil) {
 }
 
 pub fn palabre_tests() {
-  describe("palabre", [
+  describe("palabres", [
     describe("common", [
       it("should print in color", True, False, Debug, messages),
       it("should print without color", False, False, Debug, messages),
@@ -75,7 +77,7 @@ pub fn palabre_tests() {
 
 @target(erlang)
 pub fn erlang_tests() {
-  describe("palabre", [
+  describe("palabres", [
     describe("on BEAM", [
       it("should format logger message when asked", True, False, Debug, fn() {
         wisp.log_debug("Test message")

@@ -1,15 +1,15 @@
-name = "palabre"
+name = "palabres"
 version = "1.0.0"
 
 description = "Opinionated logger for Gleam, targetting both BEAM and JS"
 licences = ["MIT"]
-internal_modules = ["palabre/internals", "palabre/internals/*"]
+internal_modules = ["palabres/internals", "palabres/internals/*"]
 links = [{title = "Sponsor", href = "https://github.com/sponsors/ghivert"}]
 
 [repository]
 type = "github"
 user = "ghivert"
-repo = "palabre"
+repo = "palabres"
 
 [dependencies]
 gleam_http = ">= 3.7.2 and < 4.0.0"

@@ -1,5 +1,5 @@
 import gleam/list
-import palabre/level
+import palabres/level
 import startest.{describe, it}
 import startest/expect
 
@@ -11,7 +11,7 @@ const levels = [
 ]
 
 pub fn level_tests() {
-  describe("palabre/level", [
+  describe("palabres/level", [
     describe("from_string", [
       it("validates correct log levels", fn() {
         use #(str, expected) <- list.each(levels)

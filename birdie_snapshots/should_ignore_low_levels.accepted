@@ -2,4 +2,4 @@
 version: 1.2.4
 title: should ignore low levels
 ---
-{"at":"palabre_test.messages","level":"info","message":"Info testing message","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
+{"at":"palabres_test.messages","level":"info","message":"Info testing message","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}

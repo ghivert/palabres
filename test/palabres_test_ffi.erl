@@ -1,10 +1,10 @@
--module(palabre_test_ffi).
+-module(palabres_test_ffi).
 
 -export([destroy/0, sleep/2]).
 
 % Used only for testing purposes.
 destroy() ->
-  logger:remove_handler(palabre_logger),
+  logger:remove_handler(palabres_logger),
   logger:update_handler_config(default,
     #{formatter => {logger_formatter, #{legacy_header => true,single_line => false}},
       filters =>

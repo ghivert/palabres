@@ -1,6 +1,6 @@
-import * as converter from './palabre/internals/converter.mjs'
+import * as converter from './palabres/internals/converter.mjs'
 import * as gleam from './gleam.mjs'
-import * as levels from './palabre_level.ffi.mjs'
+import * as levels from './palabres_level.ffi.mjs'
 
 let logger = null
 

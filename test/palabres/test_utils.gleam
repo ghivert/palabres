@@ -8,16 +8,16 @@ import startest/expect
 
 pub const log_file = "/tmp/erlang.log"
 
-@external(erlang, "palabre_test_ffi", "destroy")
-@external(javascript, "../palabre.ffi.mjs", "destroy")
+@external(erlang, "palabres_test_ffi", "destroy")
+@external(javascript, "../palabres.ffi.mjs", "destroy")
 pub fn destroy_logger() -> Nil
 
 @external(erlang, "thoas", "encode")
-@external(javascript, "../palabre.ffi.mjs", "encodeJson")
+@external(javascript, "../palabres.ffi.mjs", "encodeJson")
 fn json_encode(a: a) -> String
 
-@external(erlang, "palabre_test_ffi", "sleep")
-@external(javascript, "../palabre_test.ffi.mjs", "sleep")
+@external(erlang, "palabres_test_ffi", "sleep")
+@external(javascript, "../palabres_test.ffi.mjs", "sleep")
 pub fn sleep(timeout: Int, continuation: fn() -> a) -> Nil
 
 fn clean(content: String) {

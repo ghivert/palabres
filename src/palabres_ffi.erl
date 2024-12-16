@@ -1,8 +1,8 @@
--module(palabre_ffi).
+-module(palabres_ffi).
 
 -export([configure/1, format/2, format_iso8601/0, log/3, uuid/0, is_json/0, is_color/0]).
 
--include_lib("palabre/include/palabre@options_Options.hrl").
+-include_lib("palabres/include/palabres@options_Options.hrl").
 
 configure(#options{
   level = Level,
@@ -21,18 +21,18 @@ configure(#options{
       [{domain, {fun logger_filters:domain/2, {stop, sub, [otp, sasl]}}},
        {domain, {fun logger_filters:domain/2, {stop, sub, [supervisor_report]}}}],
     metadata => #{}}),
-  logger:add_handler(palabre_logger, logger_std_h,
-    #{formatter => {palabre_ffi, #{color => Color, json => Json}},
-      filters => [{palabre_filter, {fun handler_filter/2, continue}}],
+  logger:add_handler(palabres_logger, logger_std_h,
+    #{formatter => {palabres_ffi, #{color => Color, json => Json}},
+      filters => [{palabres_filter, {fun handler_filter/2, continue}}],
       config => configure_output(Output)}),
   case StyleDefault of
     false ->
       logger:update_handler_config(default,
-      #{filters => [{palabre_filter, {fun handler_filter/2, ignore}}]});
+      #{filters => [{palabres_filter, {fun handler_filter/2, ignore}}]});
     true ->
       logger:update_handler_config(default,
-        #{formatter => {palabre_ffi, #{color => Color, json => Json}},
-          filters => [{palabre_filter, {fun handler_filter/2, ignore}}]})
+        #{formatter => {palabres_ffi, #{color => Color, json => Json}},
+          filters => [{palabres_filter, {fun handler_filter/2, ignore}}]})
   end,
   nil.
 
@@ -50,7 +50,7 @@ configure_output(Output) ->
 
 handler_filter(Event, Extra) ->
   case Event of
-    #{msg := {report, [{palabre, _Fields, _Text}]}} ->
+    #{msg := {report, [{palabres, _Fields, _Text}]}} ->
       case Extra of
         ignore -> ignore;
         continue -> Event
@@ -79,7 +79,7 @@ read_variable(Name, Default) ->
   end.
 
 log(Level, Msg, Text) ->
-  logger:log(Level, [{palabre, Msg, Text}]),
+  logger:log(Level, [{palabres, Msg, Text}]),
   nil.
 
 format(#{level := Level, msg := Msg, meta := _Meta}, #{json := Json, color := Color}) ->
@@ -115,17 +115,17 @@ format_msg(Report0, #{json := Json}) ->
         true -> maps:put("id", uuid(), maps:put("when", format_iso8601(), json_wrap([$\s, Msg])));
         false ->
           Defaults = [{<<"when"/utf8>>, [format_iso8601()]}, {<<"id"/utf8>>, [uuid()]}],
-          Converted = palabre@internals@converter:to_spaced_query_string(Defaults),
+          Converted = palabres@internals@converter:to_spaced_query_string(Defaults),
           case is_color() of
             false -> json_wrap([$\s, Converted, $\s, Msg]);
             true -> json_wrap([$\s, Converted, $\s, "\x1b[1m", Msg, "\x1b[0m"])
           end
       end;
-    {report, [{palabre, Fields, Text}]} ->
+    {report, [{palabres, Fields, Text}]} ->
       Fields1 = [{<<"when"/utf8>>, [format_iso8601()]}, {<<"id"/utf8>>, [uuid()]} | Fields],
       case Json of
-        false -> [$\s, palabre@internals@converter:to_spaced_query_string(Fields1), $\s, Text];
-        true -> palabre@internals@converter:to_json(Fields1, Text)
+        false -> [$\s, palabres@internals@converter:to_spaced_query_string(Fields1), $\s, Text];
+        true -> palabres@internals@converter:to_json(Fields1, Text)
       end;
     {report, Report1} when is_map(Report1) -> json_wrap(format_kv(maps:to_list(Report1)));
     {report, Report1} when is_list(Report1) -> json_wrap(format_kv(Report1));

@@ -1,5 +1,5 @@
 //// Log level used by most loggers. Erlang logger uses those default log levels
-//// while vailla JavaScript use a subset of them. Palabre implements them all,
+//// while vailla JavaScript use a subset of them. Palabres implements them all,
 //// whether you're running on JavaScript or Erlang. Log level will _always_
 //// appears in your logs, and will correctly be filtered by the logger.
 ////
@@ -10,7 +10,7 @@
 //// those levels.
 //// While the table can help you figure out which level to chooses, keep in
 //// mind it's mainly there to help you understand how to use log level, as
-//// palabre works differently: everything goes through `console.log` to output
+//// palabres works differently: everything goes through `console.log` to output
 //// on `stdout`. When outputting to a file, logs will never go to `console`
 //// functions. Log level will always be indicated in the log, through
 //// `level=[level]` or `{ level: [level] }`, allowing for quick and easy
@@ -32,7 +32,7 @@ import gleam/string
 
 /// Different levels of logs. Log levels correspond directly to a level of
 /// danger. `Emergency` is the most dangerous one, while `Debug` is the least
-/// dangerous one. `Info` is the default value with palabre. Once chosen, every
+/// dangerous one. `Info` is the default value with palabres. Once chosen, every
 /// level below the desired level are ignored.
 pub type Level {
   Emergency
