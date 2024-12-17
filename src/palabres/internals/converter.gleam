@@ -23,7 +23,10 @@ pub fn to_json(
   fields: List(#(String, List(String))),
   text: String,
 ) -> dict.Dict(String, dynamic.Dynamic) {
-  let init = dict.from_list([#("message", dynamic.from(text))])
+  let init = case text {
+    "" -> dict.new()
+    _ -> dict.from_list([#("message", dynamic.from(text))])
+  }
   use acc, #(key, values) <- list.fold(fields, init)
   case values {
     [value] -> dict.insert(acc, key, dynamic.from(value))

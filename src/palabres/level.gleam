@@ -7,7 +7,7 @@
 ////
 //// Find the correspondance between log levels, and JavaScript `console`
 //// functions. By default, JavaScript applies some styling in browser for
-//// those levels.
+//// those levels. \
 //// While the table can help you figure out which level to chooses, keep in
 //// mind it's mainly there to help you understand how to use log level, as
 //// palabres works differently: everything goes through `console.log` to output
@@ -15,6 +15,8 @@
 //// functions. Log level will always be indicated in the log, through
 //// `level=[level]` or `{ level: [level] }`, allowing for quick and easy
 //// indexing by a log crawler.
+////
+////
 ////
 //// log level | JS
 //// ----------|-------------------
@@ -32,8 +34,8 @@ import gleam/string
 
 /// Different levels of logs. Log levels correspond directly to a level of
 /// danger. `Emergency` is the most dangerous one, while `Debug` is the least
-/// dangerous one. `Info` is the default value with palabres. Once chosen, every
-/// level below the desired level are ignored.
+/// dangerous one. `Info` is the default value with palabres. \
+/// Once chosen, every level below the desired level are ignored.
 pub type Level {
   Emergency
   Alert
@@ -45,7 +47,7 @@ pub type Level {
   Debug
 }
 
-/// Parse a string log level, and returns the corresponding log level.
+/// Parse a string log level, and returns the corresponding log level. \
 /// Log levels are case-insensitive, and correspond litteraly to log levels
 /// from `Level` type.
 pub fn from_string(level: String) -> Result(Level, Nil) {

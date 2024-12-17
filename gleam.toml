@@ -1,10 +1,13 @@
 name = "palabres"
-version = "1.0.0"
+version = "0.1.0"
 
 description = "Opinionated logger for Gleam, targetting both BEAM and JS"
 licences = ["MIT"]
 internal_modules = ["palabres/internals", "palabres/internals/*"]
-links = [{title = "Sponsor", href = "https://github.com/sponsors/ghivert"}]
+
+[[links]]
+title = "Sponsor"
+href = "https://github.com/sponsors/ghivert"
 
 [repository]
 type = "github"

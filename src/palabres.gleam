@@ -329,7 +329,7 @@ fn append_field(
   |> list.key_set(fields, key, _)
 }
 
-/// Provides a middleware to display every incoming request for a Wisp server.
+/// Provides a middleware to display every incoming request for a Wisp server.\
 /// Use it in your router to log request with status code, path and method.
 ///
 /// ```gleam

@@ -1,24 +1,87 @@
-# palabre
+# Palabres
 
-[![Package Version](https://img.shields.io/hexpm/v/palabre)](https://hex.pm/packages/palabre)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/palabre/)
+> Palabres **[\\pa.labʁ\\]** \
+> French word, coming from the Spanish word _palabra_, meaning "parole" &
+> "word". \
+>
+> 1. Long & hard discussion to get a precise result.
+> 2. An interminable and often idle discussion.
+
+Palabres is an opinionated logger, built in Gleam for Gleamlins, targetting both
+Erlang and JavaScript. Palabres tries to be compatible with the most runtimes
+possible, so you can expect it to work on BEAM & any flavour of
+JavaScript — with 100% compatibility while the runtime respect Node.js imports.
+
+Palabres tries to stay simple yet powerful. By using structured data, text
+messages and potential metadata, Palabres tries to provides a nice and pleasant
+experience out-of-the-box with few to no configuration and helps to build &
+monitor complex system.
+
+## But what does it look like?
+
+Generally, when you're starting out a project, you rely on the default logger,
+with its default abilities. However, in the long run, you probably want to add
+context, to add advance monitoring, to follow user flows, and much more, in your
+logs. Outputting plain text in such case can make the task hard. That's where
+Palabres comes into play, it helps you to go from
+
+```sh
+INFO Server listening on http://0.0.0.0:3000
+INFO 200 GET /healthcheck
+```
+
+to
+
+```json
+{
+  "level": "info",
+  "host": "0.0.0.0",
+  "id": "3aa3660c-8f1f-4bbc-a530-346e140b0015",
+  "message": "Server started, listening",
+  "port": "3000",
+  "scheme": "http","when":"2024-12-16T17:43:40Z"
+}
+{
+  "level": "info",
+  "id": "c848d8f9-6c64-4d25-90dd-3ee3b14ec7a9",
+  "method": "GET",
+  "status": "404",
+  "when": "2024-12-16T17:43:59Z",
+  "where": "/"
+}
+```
+
+## Installation
 
 ```sh
 gleam add palabre@1
 ```
-```gleam
-import palabre
 
-pub fn main() {
-  // TODO: An example of the project in use
+## Getting started
+
+To get started, everything you need is to configure your logger, and you're
+done! Everything remaining is to use Palabres to create logs!
+
+```gleam
+import palabres
+import palabres/options
+import palabres/level
+
+pub fn configure_logger() {
+  options.defaults()
+  |> options.color(True)
+  |> options.json(False)
+  |> options.output(to: options.stdout())
+  |> palabres.configure
+}
+
+pub fn log_message() {
+  palabres.debug("My debug message")
+  |> palabres.string("my_field", "content")
+  |> palabres.int("my_other_field", 12)
+  |> palabres.log
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/palabre>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+And you're good to go! Find the entire explanations on
+[Hexdocs](https://hexdocs.pm/palabres/palabres.html).

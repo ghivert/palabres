@@ -31,18 +31,22 @@ import palabres/level
 /// Options to configure the logger. To create with [`defaults`](#defaults).
 /// Below are the configurable options, usable with the corresponding functions.
 ///
-/// - [`color`](#color) allow to choose if the output is colored or not. Default to `True`.
+/// - [`color`](#color) Defaults to `True`. \
+///   Allow to choose if the output is colored or not.\
 ///   Can be deactivated globally with the `NO_COLOR` (or `NO_COLOUR`)
-///   environment variable. Once set, `color` defaults to `False`.
-/// - [`json`](#json) will activate the JSON mode, forcing the logger to output JSON
-///   instead of strings. JSON output will automatically disable colored logging.
-///   Default to `False`.
-/// - [`level`](#level) will set the minimum required log level. Every level below will
-///   be ignored. Default to `level.Info`.
-/// - [`output`](#output) allow to choose writing to `stdout` or a file. Default to
-///   `stdout`.
-/// - [`style_default_logger`](#style_default_logger) apply the palabres styling to the default logger.
-///   Default to `True`.
+///   environment variable. \
+///   Once set, `color` defaults to `False`.
+/// - [`json`](#json) Defaults to `False`. \
+///   Activate the JSON mode, forcing the logger to output JSON
+///   instead of strings. \
+///   JSON output will automatically disable colored logging.
+/// - [`level`](#level) Defaults to `level.Info`. \
+///   Set the minimum required log level. \
+///   Every level below will be ignored.
+/// - [`output`](#output) Defaults to `stdout`. \
+///   Allow to choose writing to `stdout` or a file.
+/// - [`style_default_logger`](#style_default_logger) Defaults to `True`. \
+///   Apply the palabres styling to the default logger.
 pub opaque type Options {
   Options(
     color: Option(Bool),
@@ -54,8 +58,9 @@ pub opaque type Options {
 }
 
 /// Configurable output for the logger. Can be the standard output, or a
-/// selected file. Standard output can be simply selected with
-/// [`stdout`](#stdout), while file logging is selected with [`file`](#file).
+/// selected file. \
+/// Standard output can be simply selected with [`stdout`](#stdout), while file
+/// logging is selected with [`file`](#file). \
 /// A file logger will dump the log contents at regular interval. This interval
 /// is configurable by using [`flush`](#flush).
 ///
@@ -93,33 +98,34 @@ pub fn defaults() -> Options {
   )
 }
 
-/// Activate or deactivate colored output.
-/// Defaults to `True` if environment variable `NO_COLOR` is unset.
-/// Defaults to `False` otherwise. If `color` is called, it takes precedence on
-/// environment variable.
+/// Activate or deactivate colored output. \
+/// Defaults to `True` if environment variable `NO_COLOR` is unset. \
+/// Defaults to `False` otherwise. \
+/// If `color` is called, it takes precedence on environment variable.
 pub fn color(options: Options, color: Bool) -> Options {
   Options(..options, color: Some(color))
 }
 
-/// Activate or deactive JSON ouput.
-/// Defaults to `False`. If activated, colored output is automatically
-/// deactivated.
+/// Defaults to `False`. \
+/// Activate or deactive JSON ouput. \
+/// If activated, colored output is automatically deactivated.
 pub fn json(options: Options, json: Bool) -> Options {
   Options(..options, json:)
 }
 
-/// Set the minimum desired log level. Defaults to `level.Info`.
+/// Defaults to `level.Info`. Set the minimum desired log level.
 pub fn level(options: Options, level: level.Level) -> Options {
   Options(..options, level:)
 }
 
-/// Choose the desired output. Defaults to `stdout`.
+/// Defaults to `stdout`. Choose the desired output.
 pub fn output(options: Options, to output: Output) -> Options {
   Options(..options, output:)
 }
 
-/// Activate or deactivate styling from Palabres on default logger. Defaults to
-/// `True`. Has no effect on JavaScript, since there's no default logger.
+/// Defaults to `True`. \
+/// Activate or deactivate styling from Palabres on default logger. \
+/// Has no effect on JavaScript, since there's no default logger.
 pub fn style_default_logger(options: Options, style_default: Bool) -> Options {
   Options(..options, style_default:)
 }
