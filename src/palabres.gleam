@@ -238,6 +238,94 @@ pub fn debug(message: String) -> Log {
   init(level.Debug, message)
 }
 
+/// Log with message at level `Emergency` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_emergency("Example message")
+/// ```
+pub fn log_emergency(message: String) -> Nil {
+  log(init(level.Emergency, message))
+}
+
+/// Log with message at level `Alert` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_alert("Example message")
+/// ```
+pub fn log_alert(message: String) -> Nil {
+  log(init(level.Alert, message))
+}
+
+/// Log with message at level `Critical` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_critical("Example message")
+/// ```
+pub fn log_critical(message: String) -> Nil {
+  log(init(level.Critical, message))
+}
+
+/// Log with message at level `Error` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_error("Example message")
+/// ```
+pub fn log_error(message: String) -> Nil {
+  log(init(level.Error, message))
+}
+
+/// Log with message at level `Warning` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_warning("Example message")
+/// ```
+pub fn log_warning(message: String) -> Nil {
+  log(init(level.Warning, message))
+}
+
+/// Log with message at level `Notice` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_notice("Example message")
+/// ```
+pub fn log_notice(message: String) -> Nil {
+  log(init(level.Notice, message))
+}
+
+/// Log with message at level `Info` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_info("Example message")
+/// ```
+pub fn log_info(message: String) -> Nil {
+  log(init(level.Info, message))
+}
+
+/// Log with message at level `Debug` directly. \
+/// Avoid to write the full log pipeline when you just need to write a
+/// single message.
+///
+/// ```gleam
+/// palabres.log_debug("Example message")
+/// ```
+pub fn log_debug(message: String) -> Nil {
+  log(init(level.Debug, message))
+}
+
 /// Debug information, used to easily pinpoint a location in your code. `at`
 /// should point to a module and a function, and will display in your logs
 /// a data looking like `at=module.function` with proper colored output if
@@ -340,7 +428,7 @@ fn append_field(
 /// ```
 pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
   let response = handler()
-  info("")
+  notice("")
   |> int("status", response.status)
   |> string("method", string.uppercase(http.method_to_string(req.method)))
   |> string("where", req.path)
