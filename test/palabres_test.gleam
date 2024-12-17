@@ -1,5 +1,4 @@
 import birdie
-import gleam/io
 import palabres
 import palabres/level.{Debug, Info}
 import palabres/options
@@ -55,7 +54,6 @@ fn it(title: String, color, json, level, run_test: fn() -> Nil) {
     configure_logger(color, json, level)
     run_test()
     use <- test_utils.sleep(100)
-    io.println("1")
     let content = test_utils.read_logs()
     test_utils.remove_logs()
     test_utils.destroy_logger()
