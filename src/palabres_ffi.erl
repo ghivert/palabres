@@ -28,11 +28,11 @@ configure(#options{
   case StyleDefault of
     false ->
       logger:update_handler_config(default,
-      #{filters => [{palabres_filter, {fun handler_filter/2, ignore}}]});
+      #{filters => [{palabres_filter, {fun handler_filter/2, stop}}]});
     true ->
       logger:update_handler_config(default,
         #{formatter => {palabres_ffi, #{color => Color, json => Json}},
-          filters => [{palabres_filter, {fun handler_filter/2, ignore}}]})
+          filters => [{palabres_filter, {fun handler_filter/2, stop}}]})
   end,
   nil.
 
@@ -52,13 +52,13 @@ handler_filter(Event, Extra) ->
   case Event of
     #{msg := {report, [{palabres, _Fields, _Text}]}} ->
       case Extra of
-        ignore -> ignore;
+        stop -> stop;
         continue -> Event
       end;
     _ ->
       case Extra of
-        ignore -> Event;
-        continue -> ignore
+        stop -> Event;
+        continue -> stop
       end
   end.
 
