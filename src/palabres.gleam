@@ -99,6 +99,7 @@ import gleam/float
 import gleam/http
 import gleam/int
 import gleam/list
+import gleam/option
 import gleam/result
 import gleam/string
 import palabres/internals/utils
@@ -359,6 +360,13 @@ pub fn at(log: Log, module module: String, function function: String) -> Log {
 }
 
 /// Add a string field to your structured data.
+///
+/// ```gleam
+/// let field1 = 1.0
+/// palabres.info("Example")
+/// |> palabres.string("field1", field1)
+/// |> palabres.log
+/// ```
 pub fn string(log: Log, key: String, value: String) -> Log {
   log.fields
   |> append_field(key, value)
@@ -366,6 +374,13 @@ pub fn string(log: Log, key: String, value: String) -> Log {
 }
 
 /// Add an int field to your structured data.
+///
+/// ```gleam
+/// let field1 = 1
+/// palabres.info("Example")
+/// |> palabres.int("field1", field1)
+/// |> palabres.log
+/// ```
 pub fn int(log: Log, key: String, value: Int) -> Log {
   log.fields
   |> append_field(key, int.to_string(value))
@@ -373,13 +388,46 @@ pub fn int(log: Log, key: String, value: Int) -> Log {
 }
 
 /// Add a float field to your structured data.
+///
+/// ```gleam
+/// let field1 = 1.0
+/// palabres.info("Example")
+/// |> palabres.float("field1", field1)
+/// |> palabres.log
+/// ```
 pub fn float(log: Log, key: String, value: Float) -> Log {
   log.fields
   |> append_field(key, float.to_string(value))
   |> set_fields(log)
 }
 
+/// Add a potentially null value to your structured data.
+/// `None` will be converted to `null`, while `Some(x)` will be converted to `x`.
+///
+/// ```gleam
+/// let field1 = option.Some(1)
+/// palabres.info("Example")
+/// |> palabres.nullable("field1", field1, palabres.int)
+/// |> palabres.log
+/// ```
+pub fn nullable(
+  log: Log,
+  key: String,
+  value: option.Option(a),
+  add: fn(Log, String, a) -> Log,
+) -> Log {
+  case value {
+    option.None -> string(log, key, "null")
+    option.Some(value) -> add(log, key, value)
+  }
+}
+
 /// Run your log and make it display in your log output.
+///
+/// ```gleam
+/// palabres.info("Example")
+/// |> palabres.log
+/// ```
 pub fn log(log_: Log) -> Nil {
   let text = case utils.is_color() {
     True -> "\u{1b}[1m" <> log_.message <> "\u{1b}[0m"

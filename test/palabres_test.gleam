@@ -1,4 +1,5 @@
 import birdie
+import gleam/option
 import palabres
 import palabres/level.{Debug, Info}
 import palabres/options
@@ -46,6 +47,15 @@ fn messages() {
   |> palabres.string("test_field1", "test_value1")
   |> palabres.string("test_field1", "test_value2")
   |> palabres.string("test_field2", "test_value1")
+  |> palabres.log
+
+  palabres.alert("Alert testing message")
+  |> palabres.at("palabres_test", "messages")
+  |> palabres.string("test_field1", "test_value1")
+  |> palabres.int("test_field2", 1)
+  |> palabres.float("test_field3", 1.0)
+  |> palabres.nullable("test_field4", option.None, palabres.string)
+  |> palabres.nullable("test_field5", option.Some(1), palabres.int)
   |> palabres.log
 }
 

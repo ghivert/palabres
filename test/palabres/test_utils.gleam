@@ -1,5 +1,5 @@
 import gleam/dict
-import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/json
 import gleam/list
 import gleam/string
@@ -21,7 +21,7 @@ fn json_encode(a: a) -> String
 pub fn sleep(timeout: Int, continuation: fn() -> a) -> Nil
 
 fn clean(content: String) {
-  case json.decode(content, dynamic.dict(dynamic.string, dynamic.dynamic)) {
+  case json.parse(content, decode.dict(decode.string, decode.dynamic)) {
     Ok(dict) -> dict.delete(dict, "when") |> dict.delete("id") |> json_encode
     Error(_) ->
       content
