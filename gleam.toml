@@ -1,5 +1,5 @@
 name = "palabres"
-version = "0.3.0"
+version = "0.4.0"
 
 description = "Opinionated logger for Gleam, targetting both BEAM and JS"
 licences = ["MIT"]
