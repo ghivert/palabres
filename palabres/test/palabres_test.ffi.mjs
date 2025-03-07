@@ -6,3 +6,7 @@ export function sleep(timeout, continuation) {
     }, timeout)
   })
 }
+
+export function encodeJson(value) {
+  return JSON.stringify(value)
+}

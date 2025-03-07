@@ -12,14 +12,6 @@ export function uuid() {
   return crypto.randomUUID()
 }
 
-export function isJson() {
-  return logger?.json ?? false
-}
-
-export function isColor() {
-  return !isJson() && (logger?.color ?? false)
-}
-
 export function configure(options) {
   logger = new Logger({
     color: options.color,
@@ -29,8 +21,8 @@ export function configure(options) {
   })
 }
 
-export function log(lvl, message, text) {
-  logger?.log(lvl, message, text)
+export function log(lvl, message, text, at) {
+  logger?.log(lvl, message, text, at)
 }
 
 export function destroy() {
@@ -38,20 +30,11 @@ export function destroy() {
   logger = null
 }
 
-export function encodeJson(value) {
-  return JSON.parse(value)
-}
-
-function readColor() {
-  const noColor = process.env.NO_COLOUR || process.env.NO_COLOR
-  return noColor === undefined
-}
-
 class Logger {
   constructor(options) {
     this.buffer = []
     this.level = levels.asInt(options.level)
-    this.color = options.color[0] ?? readColor()
+    this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
     if (this.output.flush_interval) {
@@ -61,9 +44,9 @@ class Logger {
     }
   }
 
-  log(lvl, message, text) {
+  log(lvl, message, text, at) {
     if (levels.asInt(lvl) < this.level) return
-    const msg = this.#formatMessage(lvl, message, text)
+    const msg = this.#formatMessage(lvl, message, text, at)
     if (this.output.filename) return this.buffer.push(msg)
     else console.log(msg)
   }
@@ -72,22 +55,47 @@ class Logger {
     clearInterval(this.interval)
   }
 
-  #formatMessage(lvl, message, text) {
+  #formatMessage(lvl, message, text, at) {
+    const txt = converter.format_message(text, this.#isColor)
     const id = ['id', gleam.List.fromArray([uuid()])]
     const when = ['when', gleam.List.fromArray([formatIso8601()])]
     const fields = gleam.prepend(when, gleam.prepend(id, message))
-    if (isJson()) return this.#formatJSON(lvl, fields, text)
-    const fields_ = converter.to_spaced_query_string(fields)
-    return `${levels.format(lvl, this.color)} ${fields_} ${text}`
+    const fields_ = this.#addAtField(fields, at)
+    if (this.#isJson) return this.#formatJSON(lvl, fields_, txt)
+    const fields__ = converter.to_spaced_query_string(fields_, this.#isColor)
+    return `${levels.format(lvl, this.color)} ${fields__} ${txt}`
   }
 
   #formatJSON(lvl, fields, text) {
+    const text_ = converter.format_message(text, this.#isColor)
     const data = converter
       .to_json(fields, text)
       .entries()
       .map(([key, value]) => [key, value.toArray?.() ?? value])
     const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
     return JSON.stringify(data_)
+  }
+
+  get #isJson() {
+    return this.json
+  }
+
+  get #isColor() {
+    const isJson = this.#isJson
+    const isColored = this.color ?? false
+    return !isJson && isColored
+  }
+
+  #addAtField(fields, at) {
+    if (at[0] === undefined) return fields
+    const [mod, fun] = at[0]
+    const at_ = converter.format_at(mod, fun, this.#isColor, this.#isJson)
+    return gleam.prepend(['at', at_])
+  }
+
+  #readColor() {
+    const noColor = process.env.NO_COLOUR || process.env.NO_COLOR
+    return noColor === undefined
   }
 
   async #flush() {
