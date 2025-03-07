@@ -85,3 +85,31 @@ pub fn log_message() {
 
 And you're good to go! Find the entire explanations on
 [Hexdocs](https://hexdocs.pm/palabres/palabres.html).
+
+## Integrations
+
+Palabres provides out-of-the-box integration with `wisp`, the main webserver on
+Gleam! To get it, you can take a look at
+[`palabres_wisp`](https://github.com/ghivert/palabres_wisp) or follow the next
+steps.
+
+### Using `palabres_wisp`
+
+First, install the dependency:
+
+```sh
+gleam add palabres_wisp`
+```
+
+After you configured the logger as indicated abover, simply use the provided
+middleware!
+
+```gleam
+import palabres_wisp
+import wisp
+
+pub fn handle_request(request: Request) {
+  use <- palabres_wisp.log_request(request)
+  wisp.ok()
+}
+```
