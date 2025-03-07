@@ -13,6 +13,7 @@ href = "https://github.com/sponsors/ghivert"
 type = "github"
 user = "ghivert"
 repo = "palabres"
+path = "palabres"
 
 [dependencies]
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
