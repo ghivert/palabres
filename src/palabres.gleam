@@ -99,10 +99,9 @@ import gleam/float
 import gleam/http
 import gleam/int
 import gleam/list
-import gleam/option
+import gleam/option.{type Option}
 import gleam/result
 import gleam/string
-import palabres/internals/utils
 import palabres/level
 import palabres/options.{type Options}
 import wisp.{type Request, type Response}
@@ -132,6 +131,7 @@ pub opaque type Log {
     level: level.Level,
     fields: List(#(String, List(String))),
     message: String,
+    at: Option(#(String, String)),
   )
 }
 
@@ -342,21 +342,7 @@ pub fn log_debug(message: String) -> Nil {
 /// }
 /// ```
 pub fn at(log: Log, module module: String, function function: String) -> Log {
-  let key = "at"
-  let is_json = utils.is_json()
-  let is_color = utils.is_color()
-  let #(module, separator, function, reset) = case is_json, is_color {
-    False, False | True, _ -> #(module, ".", function, "")
-    False, True -> #(
-      "\u{1b}[35m" <> module,
-      "\u{1b}[0m.",
-      "\u{1b}[34m" <> function,
-      "\u{1b}[0m",
-    )
-  }
-  log.fields
-  |> append_field(key, module <> separator <> function <> reset)
-  |> set_fields(log)
+  Log(..log, at: option.Some(#(module, function)))
 }
 
 /// Add a string field to your structured data.
@@ -429,28 +415,29 @@ pub fn nullable(
 /// |> palabres.log
 /// ```
 pub fn log(log_: Log) -> Nil {
-  let text = case utils.is_color() {
-    True -> "\u{1b}[1m" <> log_.message <> "\u{1b}[0m"
-    False -> log_.message
-  }
   case log_.level {
-    level.Emergency -> do_log(log_.level, log_.fields, text)
-    level.Alert -> do_log(log_.level, log_.fields, text)
-    level.Critical -> do_log(log_.level, log_.fields, text)
-    level.Error -> do_log(log_.level, log_.fields, text)
-    level.Warning -> do_log(log_.level, log_.fields, text)
-    level.Notice -> do_log(log_.level, log_.fields, text)
-    level.Info -> do_log(log_.level, log_.fields, text)
-    level.Debug -> do_log(log_.level, log_.fields, text)
+    level.Emergency -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Alert -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Critical -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Error -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Warning -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Notice -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Info -> do_log(log_.level, log_.fields, log_.message, log_.at)
+    level.Debug -> do_log(log_.level, log_.fields, log_.message, log_.at)
   }
 }
 
 @external(erlang, "palabres_ffi", "log")
 @external(javascript, "./palabres.ffi.mjs", "log")
-fn do_log(level: level.Level, message: a, text: String) -> Nil
+fn do_log(
+  level: level.Level,
+  message: List(#(String, List(String))),
+  text: String,
+  at: Option(#(String, String)),
+) -> Nil
 
 fn init(level: level.Level, message: String) {
-  Log(level:, fields: [], message:)
+  Log(level:, fields: [], message:, at: option.None)
 }
 
 fn append_field(

@@ -1,6 +1,6 @@
 -module(palabres_ffi).
 
--export([configure/1, format/2, format_iso8601/0, log/3, uuid/0, is_json/0, is_color/0]).
+-export([configure/1, format/2, format_iso8601/0, log/4, uuid/0]).
 
 -include_lib("palabres/include/palabres@options_Options.hrl").
 
@@ -11,9 +11,7 @@ configure(#options{
   output = Output,
   style_default = StyleDefault
 }) ->
-  persistent_term:put(json, Json),
   Color = read_color(Clr),
-  persistent_term:put(color, Color),
   logger:update_primary_config(#{
     level => Level,
     filter_default => log,
@@ -50,7 +48,7 @@ configure_output(Output) ->
 
 handler_filter(Event, Extra) ->
   case Event of
-    #{msg := {report, [{palabres, _Fields, _Text}]}} ->
+    #{msg := {report, [{palabres, _Fields, _Text, _At}]}} ->
       case Extra of
         stop -> stop;
         continue -> Event
@@ -78,14 +76,14 @@ read_variable(Name, Default) ->
     _ -> true
   end.
 
-log(Level, Msg, Text) ->
-  logger:log(Level, [{palabres, Msg, Text}]),
+log(Level, Msg, Text, At) ->
+  logger:log(Level, [{palabres, Msg, Text, At}]),
   nil.
 
 format(#{level := Level, msg := Msg, meta := _Meta}, #{json := Json, color := Color}) ->
   case Json of
-    false -> [format_level(Level, #{color => Color}), format_msg(Msg, #{json => false}), $\n];
-    true -> [thoas:encode(maps:put("level", Level, format_msg(Msg, #{json => true}))), $\n]
+    false -> [format_level(Level, #{color => Color}), format_msg(Msg, #{color => Color, json => false}), $\n];
+    true -> [thoas:encode(maps:put("level", Level, format_msg(Msg, #{color => false, json => true}))), $\n]
   end.
 
 format_level(Level, #{color := Color}) ->
@@ -108,39 +106,41 @@ format_level(Level, #{color := Color}) ->
     debug     -> "level=debg"
   end.
 
-format_msg(Report0, #{json := Json}) ->
+format_msg(Report0, #{color := Color, json := Json}) ->
   case Report0 of
     {string, Msg} ->
-      case is_json() of
-        true -> maps:put("id", uuid(), maps:put("when", format_iso8601(), json_wrap([$\s, Msg])));
+      case Json of
+        true -> maps:put("id", uuid(), maps:put("when", format_iso8601(), json_wrap([$\s, Msg], Json)));
         false ->
           Defaults = [{<<"when"/utf8>>, [format_iso8601()]}, {<<"id"/utf8>>, [uuid()]}],
-          Converted = palabres@internals@converter:to_spaced_query_string(Defaults),
-          case is_color() of
-            false -> json_wrap([$\s, Converted, $\s, Msg]);
-            true -> json_wrap([$\s, Converted, $\s, "\x1b[1m", Msg, "\x1b[0m"])
+          Converted = palabres@internals@converter:to_spaced_query_string(Defaults, Color),
+          case Color of
+            false -> json_wrap([$\s, Converted, $\s, Msg], Json);
+            true -> json_wrap([$\s, Converted, $\s, "\x1b[1m", Msg, "\x1b[0m"], Json)
           end
       end;
-    {report, [{palabres, Fields, Text}]} ->
+    {report, [{palabres, Fields, Text, At}]} ->
+      Text1 = palabres@internals@converter:format_message(Text, Color),
       Fields1 = [{<<"when"/utf8>>, [format_iso8601()]}, {<<"id"/utf8>>, [uuid()]} | Fields],
+      Fields2 = case At of
+        {some, {Mod, Fun}} -> [{<<"at"/utf8>>, [palabres@internals@converter:format_at(Mod, Fun, Color, Json)]} | Fields1];
+        _ -> Fields1
+      end,
       case Json of
-        false -> [$\s, palabres@internals@converter:to_spaced_query_string(Fields1), $\s, Text];
-        true -> palabres@internals@converter:to_json(Fields1, Text)
+        false -> [$\s, palabres@internals@converter:to_spaced_query_string(Fields2, Color), $\s, Text1];
+        true -> palabres@internals@converter:to_json(Fields2, Text1)
       end;
-    {report, Report1} when is_map(Report1) -> json_wrap(format_kv(maps:to_list(Report1)));
-    {report, Report1} when is_list(Report1) -> json_wrap(format_kv(Report1));
-    _ -> json_wrap([$\s, gleam@string:inspect(Report0)])
+    {report, Report1} when is_map(Report1) -> json_wrap(format_kv(maps:to_list(Report1)), Json);
+    {report, Report1} when is_list(Report1) -> json_wrap(format_kv(Report1), Json);
+    _ -> json_wrap([$\s, gleam@string:inspect(Report0)], Json)
   end.
 
-json_wrap(Content) ->
-  case is_json() of
-    false -> Content;
-    true ->
-      case Content of
-        [$\s, Content1] -> #{message => Content1};
-        _ -> #{message => Content}
-      end
-    end.
+json_wrap(Content, Json) ->
+  case {Json, Content} of
+    {false, _} -> Content;
+    {true, [$\s, Content1]} -> #{message => Content1};
+    {true, _} -> #{message => Content}
+  end.
 
 format_kv(Pairs) ->
   case Pairs of
@@ -164,10 +164,3 @@ uuid() ->
   Uuid0 = uuid:get_v4(),
   Uuid1 = uuid:uuid_to_string(Uuid0),
   unicode:characters_to_binary(Uuid1).
-
-is_json() ->
-  persistent_term:get(json, false).
-
-is_color() ->
-  not (persistent_term:get(json, false))
-    andalso persistent_term:get(color, false).
