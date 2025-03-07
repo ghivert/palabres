@@ -96,15 +96,12 @@
 //// won't be able to format them accordingly.
 
 import gleam/float
-import gleam/http
 import gleam/int
 import gleam/list
 import gleam/option.{type Option}
 import gleam/result
-import gleam/string
 import palabres/level
 import palabres/options.{type Options}
-import wisp.{type Request, type Response}
 
 /// Configure Palabres logger. Because logger is a singleton, it only needs to be
 /// configured once at startup. Select your options, and run configurations, to
@@ -450,25 +447,6 @@ fn append_field(
   |> result.unwrap([])
   |> list.prepend(value)
   |> list.key_set(fields, key, _)
-}
-
-/// Provides a middleware to display every incoming request for a Wisp server.\
-/// Use it in your router to log request with status code, path and method.
-///
-/// ```gleam
-/// pub fn router(req: wisp.Request, ctx: context) {
-///   use <- palabres.log_request(req)
-///   route_request(req)
-/// }
-/// ```
-pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
-  let response = handler()
-  notice("")
-  |> int("status", response.status)
-  |> string("method", string.uppercase(http.method_to_string(req.method)))
-  |> string("where", req.path)
-  |> log
-  response
 }
 
 fn set_fields(fields: List(#(String, List(String))), log: Log) -> Log {
