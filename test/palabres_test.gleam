@@ -6,9 +6,6 @@ import palabres/options
 import palabres/test_utils
 import startest.{describe}
 
-@target(erlang)
-import wisp
-
 pub fn main() {
   startest.default_config()
   |> startest.run
@@ -79,17 +76,6 @@ pub fn palabre_tests() {
       it("should print in JSON", False, True, Debug, messages),
       it("should print in JSON and ignore color", True, True, Debug, messages),
       it("should ignore low levels", True, True, Info, messages),
-    ]),
-  ])
-}
-
-@target(erlang)
-pub fn erlang_tests() {
-  describe("palabres", [
-    describe("on BEAM", [
-      it("should format logger message when asked", True, False, Debug, fn() {
-        wisp.log_debug("Test message")
-      }),
     ]),
   ])
 }

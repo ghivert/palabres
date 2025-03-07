@@ -1,5 +1,5 @@
 name = "palabres"
-version = "0.3.0"
+version = "0.4.0"
 
 description = "Opinionated logger for Gleam, targetting both BEAM and JS"
 licences = ["MIT"]
@@ -15,11 +15,9 @@ user = "ghivert"
 repo = "palabres"
 
 [dependencies]
-gleam_http = ">= 3.5.0 and < 4.0.0"
 gleam_stdlib = ">= 0.34.0 and < 2.0.0"
 thoas = ">= 1.0.0 and < 2.0.0"
 uuid_erl = ">= 2.0.0 and < 3.0.0"
-wisp = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 birdie = ">= 1.2.4 and < 2.0.0"
