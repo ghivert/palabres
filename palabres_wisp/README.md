@@ -1,24 +1,41 @@
-# palabres_wisp
+# Palabres + Wisp
 
-[![Package Version](https://img.shields.io/hexpm/v/palabres_wisp)](https://hex.pm/packages/palabres_wisp)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/palabres_wisp/)
+`palabres_wisp` is an integration of [`palabres`](https://hexdocs.pm/palabres)
+for [`wisp`](https://hexdocs.pm/wisp). When using `wisp`, you can simply use the
+Palabres integration, and get your logs nicely formatted!
+
+## Installation
 
 ```sh
-gleam add palabres_wisp@1
+gleam add palabres_wisp
 ```
-```gleam
-import palabres_wisp
 
-pub fn main() {
-  // TODO: An example of the project in use
+## Getting started
+
+To get started, everything you need is to configure your logger, calling the
+`wisp` middleware and you're done! Everything remaining is to use Palabres to
+create logs!
+
+```gleam
+import palabres
+import palabres/options
+import palabres/level
+import palabres_wisp
+import wisp
+
+pub fn configure_logger() {
+  options.defaults()
+  |> options.color(True)
+  |> options.json(False)
+  |> options.output(to: options.stdout())
+  |> palabres.configure
+}
+
+pub fn handle_request(request: Request) -> Response {
+  use <- palabres_wisp.log_request(request)
+  wisp.ok()
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/palabres_wisp>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+And you're good to go! Explore the possibilities you got with Palabres on
+[Hexdocs](https://hexdocs.pm/palabres/palabres.html).

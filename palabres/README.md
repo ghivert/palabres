@@ -54,7 +54,7 @@ to
 ## Installation
 
 ```sh
-gleam add palabre@1
+gleam add palabres@1
 ```
 
 ## Getting started

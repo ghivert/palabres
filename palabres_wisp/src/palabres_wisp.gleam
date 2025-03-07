@@ -7,8 +7,10 @@ import wisp.{type Request, type Response}
 /// Use it in your router to log request with status code, path and method.
 ///
 /// ```gleam
-/// pub fn router(req: wisp.Request, ctx: context) {
-///   use <- palabres.log_request(req)
+/// import palabres_wisp
+/// import wisp
+/// pub fn router(req: wisp.Request, ctx: context) -> wisp.Response {
+///   use <- palabres_wisp.log_request(req)
 ///   route_request(req)
 /// }
 /// ```
