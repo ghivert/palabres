@@ -1,3 +1,7 @@
+### v0.4.1 - 2025-03-07
+
+- Fix JS runtime
+
 ### v0.4.0 - 2025-03-07
 
 - Refactor formatting to avoid `persistent_term` on Erlang target.
