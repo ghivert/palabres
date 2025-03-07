@@ -4,9 +4,13 @@ import startest.{describe, it}
 import startest/expect
 
 const levels = [
-  #("emergency", level.Emergency), #("alert", level.Alert),
-  #("critical", level.Critical), #("error", level.Error),
-  #("warning", level.Warning), #("notice", level.Notice), #("info", level.Info),
+  #("emergency", level.Emergency),
+  #("alert", level.Alert),
+  #("critical", level.Critical),
+  #("error", level.Error),
+  #("warning", level.Warning),
+  #("notice", level.Notice),
+  #("info", level.Info),
   #("debug", level.Debug),
 ]
 
