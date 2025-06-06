@@ -1,7 +1,5 @@
 import gleam/list
 import palabres/level
-import startest.{describe, it}
-import startest/expect
 
 const levels = [
   #("emergency", level.Emergency),
@@ -14,18 +12,13 @@ const levels = [
   #("debug", level.Debug),
 ]
 
-pub fn level_tests() {
-  describe("palabres/level", [
-    describe("from_string", [
-      it("validates correct log levels", fn() {
-        use #(str, expected) <- list.each(levels)
-        level.from_string(str)
-        |> expect.to_equal(Ok(expected))
-      }),
-      it("fails with invalid log level", fn() {
-        level.from_string("anything")
-        |> expect.to_be_error
-      }),
-    ]),
-  ])
+pub fn validates_correct_log_levels_test() {
+  use #(str, expected) <- list.each(levels)
+  let level = level.from_string(str)
+  assert level == Ok(expected)
+}
+
+pub fn fails_with_invalid_log_level_test() {
+  let level = level.from_string("anything")
+  assert level == Error(Nil)
 }

@@ -69,7 +69,7 @@ class Logger {
   #formatJSON(lvl, fields, text) {
     const text_ = converter.format_message(text, this.#isColor)
     const data = converter
-      .to_json(fields, text)
+      .to_json(fields, text_)
       .entries()
       .map(([key, value]) => [key, value.toArray?.() ?? value])
     const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }

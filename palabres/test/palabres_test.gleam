@@ -1,14 +1,13 @@
 import birdie
 import gleam/option
+import gleeunit
 import palabres
 import palabres/level.{Debug, Info}
 import palabres/options
 import palabres/test_utils
-import startest.{describe}
 
 pub fn main() {
-  startest.default_config()
-  |> startest.run
+  gleeunit.main()
 }
 
 fn configure_logger(
@@ -56,26 +55,32 @@ fn messages() {
   |> palabres.log
 }
 
-fn it(title: String, color, json, level, run_test: fn() -> Nil) {
-  startest.it(title, fn() {
-    configure_logger(color, json, level)
-    run_test()
-    use <- test_utils.sleep(100)
-    let content = test_utils.read_logs()
-    test_utils.remove_logs()
-    test_utils.destroy_logger()
-    birdie.snap(title:, content:)
-  })
+fn run(title: String, color, json, level, run_test: fn() -> Nil) {
+  configure_logger(color, json, level)
+  run_test()
+  use <- test_utils.sleep(100)
+  let content = test_utils.read_logs()
+  test_utils.remove_logs()
+  test_utils.destroy_logger()
+  birdie.snap(title:, content:)
 }
 
-pub fn palabre_tests() {
-  describe("palabres", [
-    describe("common", [
-      it("should print in color", True, False, Debug, messages),
-      it("should print without color", False, False, Debug, messages),
-      it("should print in JSON", False, True, Debug, messages),
-      it("should print in JSON and ignore color", True, True, Debug, messages),
-      it("should ignore low levels", True, True, Info, messages),
-    ]),
-  ])
+pub fn should_print_in_color_test() {
+  run("should print in color", True, False, Debug, messages)
+}
+
+pub fn should_print_without_color_test() {
+  run("should print without color", False, False, Debug, messages)
+}
+
+pub fn should_print_in_json_test() {
+  run("should print in JSON", False, True, Debug, messages)
+}
+
+pub fn should_print_in_json_and_ignore_color_test() {
+  run("should print in JSON and ignore color", True, True, Debug, messages)
+}
+
+pub fn should_ignore_low_levels_test() {
+  run("should ignore low levels", True, True, Info, messages)
 }

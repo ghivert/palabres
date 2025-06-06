@@ -4,7 +4,6 @@ import gleam/json
 import gleam/list
 import gleam/string
 import simplifile
-import startest/expect
 
 pub const log_file = "/tmp/erlang.log"
 
@@ -38,8 +37,8 @@ fn remove_when_id(part: String) {
 }
 
 pub fn read_logs() {
-  simplifile.read(log_file)
-  |> expect.to_be_ok
+  let assert Ok(file) = simplifile.read(log_file)
+  file
   |> string.split("\n")
   |> list.map(clean)
   |> string.join("\n")
