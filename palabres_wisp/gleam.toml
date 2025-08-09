@@ -1,5 +1,5 @@
 name = "palabres_wisp"
-version = "0.4.1"
+version = "1.0.0"
 target = "erlang"
 
 description = "Wisp integration for palabres, an opinionated logger for Gleam"
@@ -14,11 +14,12 @@ type = "github"
 user = "ghivert"
 repo = "palabres"
 path = "palabres_wisp"
+tag-prefix = "palabres_wisp_"
 
 [dependencies]
 gleam_http = ">= 3.5.0 and < 5.0.0"
 gleam_stdlib = ">= 0.60.0 and < 2.0.0"
-palabres = ">= 0.4.0 and < 1.0.0"
+palabres = ">= 0.4.0 and < 2.0.0"
 wisp = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
