@@ -14,7 +14,7 @@ pub const log_file = "/tmp/palabres.log"
 @external(javascript, "../palabres.ffi.mjs", "destroy")
 pub fn destroy_logger() -> Nil
 
-@external(erlang, "thoas", "encode")
+@external(erlang, "palabres_test_ffi", "encode")
 @external(javascript, "../palabres_test.ffi.mjs", "encode")
 fn encode(a: Dict(String, Dynamic)) -> String
 

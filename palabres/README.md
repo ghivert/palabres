@@ -17,6 +17,13 @@ messages and potential metadata, Palabres tries to provides a nice and pleasant
 experience out-of-the-box with few to no configuration and helps to build &
 monitor complex system.
 
+> ⚠️ **About Erlang/OTP compatibility**
+>
+> Palabres requires Erlang/OTP to support
+> [`json`](https://www.erlang.org/doc/apps/stdlib/json.html) module. `json` is
+> supported starting with OTP 27. All Erlang/OTP versions before 27 **will not
+> work** with Palabres.
+
 ## But what does it look like?
 
 Generally, when you're starting out a project, you rely on the default logger,

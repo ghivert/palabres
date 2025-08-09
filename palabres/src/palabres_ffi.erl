@@ -132,8 +132,9 @@ format(#{level := Level, msg := Msg, meta := _Meta}, Options) ->
     true ->
       JsonOptions = #{color => false, json => true},
       JsonData0 = format_msg(Msg, JsonOptions),
-      JsonData1 = maps:put("level", Level, JsonData0),
-      JsonString = thoas:encode(JsonData1),
+      JsonData1 = maps:put(<<"level">>, Level, JsonData0),
+      JsonIo = json:encode(JsonData1),
+      JsonString = iolist_to_binary(JsonIo),
       [JsonString, $\n]
   end.
 
