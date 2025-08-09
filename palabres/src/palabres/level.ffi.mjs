@@ -1,4 +1,4 @@
-import * as level from './palabres/level.mjs'
+import * as level from './level.mjs'
 
 export function asInt(lvl) {
   if (lvl instanceof level.Emergency) return 7

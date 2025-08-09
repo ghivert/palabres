@@ -95,11 +95,9 @@
 //// every logs _should go_ through the Palabres package, otherwise the logger
 //// won't be able to format them accordingly.
 
-import gleam/float
-import gleam/int
 import gleam/list
-import gleam/option.{type Option}
-import gleam/result
+import gleam/option.{type Option, Some}
+import palabres/internals/field.{type Fields}
 import palabres/level
 import palabres/options.{type Options}
 
@@ -126,7 +124,7 @@ pub fn configure(options: Options) -> Nil
 pub opaque type Log {
   Log(
     level: level.Level,
-    fields: List(#(String, List(String))),
+    fields: field.Fields,
     message: String,
     at: Option(#(String, String)),
   )
@@ -339,7 +337,7 @@ pub fn log_debug(message: String) -> Nil {
 /// }
 /// ```
 pub fn at(log: Log, module module: String, function function: String) -> Log {
-  Log(..log, at: option.Some(#(module, function)))
+  Log(..log, at: Some(#(module, function)))
 }
 
 /// Add a string field to your structured data.
@@ -351,9 +349,10 @@ pub fn at(log: Log, module module: String, function function: String) -> Log {
 /// |> palabres.log
 /// ```
 pub fn string(log: Log, key: String, value: String) -> Log {
-  log.fields
-  |> append_field(key, value)
-  |> set_fields(log)
+  Log(..log, fields: {
+    let value = field.string(value)
+    field.append(log.fields, key, value)
+  })
 }
 
 /// Add an int field to your structured data.
@@ -365,9 +364,10 @@ pub fn string(log: Log, key: String, value: String) -> Log {
 /// |> palabres.log
 /// ```
 pub fn int(log: Log, key: String, value: Int) -> Log {
-  log.fields
-  |> append_field(key, int.to_string(value))
-  |> set_fields(log)
+  Log(..log, fields: {
+    let value = field.int(value)
+    field.append(log.fields, key, value)
+  })
 }
 
 /// Add a float field to your structured data.
@@ -379,9 +379,25 @@ pub fn int(log: Log, key: String, value: Int) -> Log {
 /// |> palabres.log
 /// ```
 pub fn float(log: Log, key: String, value: Float) -> Log {
-  log.fields
-  |> append_field(key, float.to_string(value))
-  |> set_fields(log)
+  Log(..log, fields: {
+    let value = field.float(value)
+    field.append(log.fields, key, value)
+  })
+}
+
+/// Add a boolean field to your structured data.
+///
+/// ```gleam
+/// let field1 = True
+/// palabres.info("Example")
+/// |> palabres.bool("field1", field1)
+/// |> palabres.log
+/// ```
+pub fn bool(log: Log, key: String, value: Bool) -> Log {
+  Log(..log, fields: {
+    let value = field.bool(value)
+    field.append(log.fields, key, value)
+  })
 }
 
 /// Add a potentially null value to your structured data.
@@ -400,9 +416,33 @@ pub fn nullable(
   add: fn(Log, String, a) -> Log,
 ) -> Log {
   case value {
-    option.None -> string(log, key, "null")
-    option.Some(value) -> add(log, key, value)
+    Some(value) -> add(log, key, value)
+    option.None -> {
+      Log(..log, fields: {
+        let value = field.null
+        field.append(log.fields, key, value)
+      })
+    }
   }
+}
+
+/// Add a list of values to your structured data.
+///
+/// ```gleam
+/// let field1 = [1, 2]
+/// palabres.info("Example")
+/// |> palabres.list("field1", field1, palabres.int)
+/// |> palabres.log
+/// ```
+pub fn list(
+  log: Log,
+  key: String,
+  value: List(a),
+  add: fn(Log, String, a) -> Log,
+) -> Log {
+  let value = list.reverse(value)
+  use log, value <- list.fold(value, log)
+  add(log, key, value)
 }
 
 /// Run your log and make it display in your log output.
@@ -411,44 +451,21 @@ pub fn nullable(
 /// palabres.info("Example")
 /// |> palabres.log
 /// ```
-pub fn log(log_: Log) -> Nil {
-  case log_.level {
-    level.Emergency -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Alert -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Critical -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Error -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Warning -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Notice -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Info -> do_log(log_.level, log_.fields, log_.message, log_.at)
-    level.Debug -> do_log(log_.level, log_.fields, log_.message, log_.at)
-  }
+pub fn log(log: Log) -> Nil {
+  let Log(level:, message:, fields:, at:) = log
+  do_log(level, fields, message, at)
 }
 
 @external(erlang, "palabres_ffi", "log")
 @external(javascript, "./palabres.ffi.mjs", "log")
 fn do_log(
   level: level.Level,
-  message: List(#(String, List(String))),
-  text: String,
+  fields: Fields,
+  message: String,
   at: Option(#(String, String)),
 ) -> Nil
 
 fn init(level: level.Level, message: String) {
-  Log(level:, fields: [], message:, at: option.None)
-}
-
-fn append_field(
-  fields: List(#(String, List(String))),
-  key: String,
-  value: String,
-) -> List(#(String, List(String))) {
-  fields
-  |> list.key_find(key)
-  |> result.unwrap([])
-  |> list.prepend(value)
-  |> list.key_set(fields, key, _)
-}
-
-fn set_fields(fields: List(#(String, List(String))), log: Log) -> Log {
-  Log(..log, fields:)
+  let fields = [#("at", []), #("id", []), #("when", [])]
+  Log(level:, fields:, message:, at: option.None)
 }

@@ -27,7 +27,7 @@ fn configure_logger(
   |> palabres.configure
 }
 
-fn messages() {
+fn example_messages() {
   // Print a debug message, should be displayed almost every time while
   // log level, because log level should be Debug almost every time in tests.
   palabres.debug("Debug testing message")
@@ -55,32 +55,43 @@ fn messages() {
   |> palabres.log
 }
 
-fn run(title: String, color, json, level, run_test: fn() -> Nil) {
+type Options {
+  Options(color: Bool, json: Bool, level: level.Level)
+}
+
+fn run(options: Options, title: String) -> Nil {
+  let title = test_utils.multitarget(title)
+  let Options(color:, json:, level:) = options
   configure_logger(color, json, level)
-  run_test()
+  example_messages()
   use <- test_utils.sleep(100)
   let content = test_utils.read_logs()
-  test_utils.remove_logs()
   test_utils.destroy_logger()
+  test_utils.remove_logs()
   birdie.snap(title:, content:)
 }
 
 pub fn should_print_in_color_test() {
-  run("should print in color", True, False, Debug, messages)
+  Options(color: True, json: False, level: Debug)
+  |> run("should print in color")
 }
 
 pub fn should_print_without_color_test() {
-  run("should print without color", False, False, Debug, messages)
+  Options(color: False, json: False, level: Debug)
+  |> run("should print without color")
 }
 
 pub fn should_print_in_json_test() {
-  run("should print in JSON", False, True, Debug, messages)
+  Options(color: False, json: True, level: Debug)
+  |> run("should print in JSON")
 }
 
 pub fn should_print_in_json_and_ignore_color_test() {
-  run("should print in JSON and ignore color", True, True, Debug, messages)
+  Options(color: True, json: True, level: Debug)
+  |> run("should print in JSON and ignore color")
 }
 
 pub fn should_ignore_low_levels_test() {
-  run("should ignore low levels", True, True, Info, messages)
+  Options(color: True, json: True, level: Info)
+  |> run("should ignore low levels")
 }

@@ -1,6 +1,6 @@
 -module(palabres_test_ffi).
 
--export([destroy/0, sleep/2]).
+-export([destroy/0, sleep/2, encode/1]).
 
 % Used only for testing purposes.
 destroy() ->
@@ -17,3 +17,7 @@ sleep(Timeout, Continuation) ->
   timer:sleep(Timeout),
   Continuation(),
   nil.
+
+encode(A) ->
+  B = json:encode(A),
+  iolist_to_binary(B).

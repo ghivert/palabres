@@ -1,3 +1,11 @@
+### v1.0.0 - 2025-08-09
+
+- Add `bool` field handler.
+- Add `list` field handler.
+- Fix JavaScript runtime.
+- Fix JSON generation: `null` and numbers are now properly JSON serialised.
+- Improve internal code and make it easier to maintain.
+
 ### v0.4.1 - 2025-03-07
 
 - Fix JS runtime

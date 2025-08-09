@@ -1,6 +1,6 @@
-import * as converter from './palabres/internals/converter.mjs'
-import * as gleam from './gleam.mjs'
-import * as levels from './palabres_level.ffi.mjs'
+import * as $converter from './palabres/internals/converter.mjs'
+import * as $field from './palabres/internals/field.mjs'
+import * as levels from './palabres/level.ffi.mjs'
 
 let logger = null
 
@@ -21,8 +21,8 @@ export function configure(options) {
   })
 }
 
-export function log(lvl, message, text, at) {
-  logger?.log(lvl, message, text, at)
+export function log(lvl, fields, message, at) {
+  logger?.log(lvl, fields, message, at)
 }
 
 export function destroy() {
@@ -37,41 +37,39 @@ class Logger {
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
-    if (this.output.flush_interval) {
-      this.interval = setInterval(() => {
-        this.#flush()
-      }, this.output.flush_interval)
-    }
+    const timer = this.output.flush_interval[0]
+    if (timer) this.interval = setInterval(() => this.#flush(), timer)
   }
 
-  log(lvl, message, text, at) {
+  log(lvl, fields, message, at) {
     if (levels.asInt(lvl) < this.level) return
-    const msg = this.#formatMessage(lvl, message, text, at)
+    const msg = this.#formatMessage(lvl, fields, message, at)
     if (this.output.filename) return this.buffer.push(msg)
     else console.log(msg)
   }
 
   destroy() {
     clearInterval(this.interval)
+    this.#flush()
   }
 
-  #formatMessage(lvl, message, text, at) {
-    const txt = converter.format_message(text, this.#isColor)
-    const id = ['id', gleam.List.fromArray([uuid()])]
-    const when = ['when', gleam.List.fromArray([formatIso8601()])]
-    const fields = gleam.prepend(when, gleam.prepend(id, message))
-    const fields_ = this.#addAtField(fields, at)
-    if (this.#isJson) return this.#formatJSON(lvl, fields_, txt)
-    const fields__ = converter.to_spaced_query_string(fields_, this.#isColor)
-    return `${levels.format(lvl, this.color)} ${fields__} ${txt}`
+  #formatMessage(lvl, fields, message, at) {
+    const id = $field.string(uuid())
+    const when = $field.string(formatIso8601())
+    const f1 = $field.append($field.append(fields, 'id', id), 'when', when)
+    const f2 = $converter.append_at(f1, at, this.#isColor, this.#isJson)
+    if (this.#isJson) return this.#formatJSON(lvl, f2, message)
+    const msg = $converter.format_message(message, this.#isColor)
+    const f3 = $converter.to_spaced_query_string(f2, this.#isColor)
+    return `${levels.format(lvl, this.color)} ${f3} ${msg}`
   }
 
-  #formatJSON(lvl, fields, text) {
-    const text_ = converter.format_message(text, this.#isColor)
-    const data = converter
-      .to_json(fields, text_)
+  #formatJSON(lvl, fields, message) {
+    const message_ = $converter.format_message(message, this.#isColor)
+    const data = $converter
+      .to_json(fields, message_)
       .entries()
-      .map(([key, value]) => [key, value.toArray?.() ?? value])
+      .map(([key, value]) => [key, value?.toArray?.() ?? value ?? null])
     const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
     return JSON.stringify(data_)
   }
@@ -81,16 +79,9 @@ class Logger {
   }
 
   get #isColor() {
-    const isJson = this.#isJson
+    const isJson = this.json
     const isColored = this.color ?? false
     return !isJson && isColored
-  }
-
-  #addAtField(fields, at) {
-    if (at[0] === undefined) return fields
-    const [mod, fun] = at[0]
-    const at_ = converter.format_at(mod, fun, this.#isColor, this.#isJson)
-    return gleam.prepend(['at', at_])
   }
 
   #readColor() {
@@ -106,6 +97,6 @@ class Logger {
     await fs.promises.mkdir(dirname, { recursive: true })
     const message = this.buffer.join('\n')
     this.buffer = []
-    await fs.promises.appendFile(path, message)
+    await fs.promises.appendFile(filename, message)
   }
 }

@@ -1,12 +1,14 @@
 export function sleep(timeout, continuation) {
-  return new Promise(r => {
+  return new Promise(resolve => {
     setTimeout(() => {
       continuation()
-      r()
+      resolve()
     }, timeout)
   })
 }
 
-export function encodeJson(value) {
-  return JSON.stringify(value)
+export function encode(value) {
+  const entries = value.entries()
+  const dict = Object.fromEntries(entries)
+  return JSON.stringify(dict)
 }
