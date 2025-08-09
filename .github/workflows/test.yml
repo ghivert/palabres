@@ -8,33 +8,40 @@ on:
 
 jobs:
   test-palabres:
+    name: Palabres
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "27.1.2"
-          gleam-version: "1.8.1"
-          rebar3-version: "3.24.0"
+          otp-version: '28.0.2'
+          gleam-version: '1.12.0'
+          rebar3-version: '3.25.1'
       - run: gleam deps download
         working-directory: palabres
-      - run: gleam test
+      - run: gleam test --target erlang
+        working-directory: palabres
+      - run: gleam test --target javascript
         working-directory: palabres
       - run: gleam format --check src test
         working-directory: palabres
 
   test-palabres_wisp:
+    name: Palabres — Wisp
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: "27.1.2"
-          gleam-version: "1.8.1"
-          rebar3-version: "3.24.0"
+          otp-version: '28.0.2'
+          gleam-version: '1.12.0'
+          rebar3-version: '3.25.1'
       - run: gleam deps download
         working-directory: palabres_wisp
-      - run: gleam test
+      - run: gleam test --target erlang
         working-directory: palabres_wisp
       - run: gleam format --check src test
         working-directory: palabres_wisp
