@@ -26,7 +26,7 @@ update_primary_config(Options) ->
     filters =>
       [{domain, {fun logger_filters:domain/2, {stop, sub, [otp, sasl]}}},
        {domain, {fun logger_filters:domain/2, {stop, sub, [supervisor_report]}}}],
-    metadata => #{}}),
+    metadata => palabres@internals@field:default_fields_to_dynamic(Options#options.default_fields)}),
   nil.
 
 % Add the `palabres_logger` to the logger, living besides the `default` logger.
@@ -39,7 +39,8 @@ update_primary_config(Options) ->
 add_palabres_logger(Options) ->
   Color = read_color(Options#options.color),
   logger:add_handler(palabres_logger, logger_std_h,
-    #{formatter => {palabres_ffi, #{color => Color, json => Options#options.json}},
+    #{formatter => {palabres_ffi, #{color => Color, json => Options#options.json,
+      default_fields => Options#options.default_fields}},
       filters => [{palabres_filter, {fun handler_filter/2, continue}}],
       config =>
         case Options#options.output of
@@ -69,7 +70,10 @@ style_default_logger(Options) ->
   case Options#options.style_default of
     false -> logger:update_handler_config(default, #{filters => Filters});
     true ->
-      FormatOptions = #{color => Color, json => Options#options.json},
+      FormatOptions =
+        #{color => Color,
+          json => Options#options.json,
+          default_fields => Options#options.default_fields},
       Formatter = {palabres_ffi, FormatOptions},
       HandlerOptions = #{formatter => Formatter, filters => Filters},
       logger:update_handler_config(default, HandlerOptions)
@@ -130,7 +134,7 @@ format(#{level := Level, msg := Msg, meta := _Meta}, Options) ->
       Msg1 = format_msg(Msg, Options),
       [Level1, Msg1, $\n];
     true ->
-      JsonOptions = #{color => false, json => true},
+      JsonOptions = maps:put(color, false, Options),
       JsonData0 = format_msg(Msg, JsonOptions),
       JsonData1 = maps:put(<<"level">>, Level, JsonData0),
       JsonIo = json:encode(JsonData1),
@@ -190,21 +194,21 @@ format_msg(Report0, Options) ->
 % not override the standard logger, and as such, user can still send plain text
 % to the logger, as well as any module can do. In that case, Palabres will still
 % try to format the log as the user desires.
-format_string_msg(Msg, #{color := Color, json := Json}) ->
+format_string_msg(Msg, Options) ->
+  #{color := Color, json := Json, default_fields := DefaultFields} = Options,
   When = palabres_utils_ffi:format_iso8601(),
-  Id = palabres_utils_ffi:uuid(),
   case Json of
     true ->
+      DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
       JsonData0 = #{message => Msg},
       JsonData1 = maps:put("when", When, JsonData0),
-      JsonData2 = maps:put("id", Id, JsonData1),
+      JsonData2 = maps:merge(JsonData1, DefaultFields1),
       JsonData2;
     false ->
       When1 = {string_field, When},
-      Id1 = {string_field, Id},
       Defaults = [],
-      Defaults1 = palabres@interneals@field:append(Defaults, <<"when"/utf8>>, When1),
-      Defaults2 = palabres@internals@field:append(Defaults1, <<"id"/utf8>>, Id1),
+      Defaults1 = palabres@internals@field:append(Defaults, <<"when"/utf8>>, When1),
+      Defaults2 = lists:append(Defaults1, DefaultFields),
       Qs = palabres@internals@converter:to_spaced_query_string(Defaults2, Color),
       case Color of
         false -> [$\s, Qs, $\s, Msg];
@@ -215,13 +219,13 @@ format_string_msg(Msg, #{color := Color, json := Json}) ->
 % Format standard Palabres reports. Palabres reports are identified in tuples
 % starting with atom `palabres`. It is expected that no one will send a tuple
 % starting with `palabres` as first argument.
-format_palabres_report(Fields, Msg, At, #{color := Color, json := Json}) ->
+format_palabres_report(Fields, Msg, At, Options) ->
+  #{color := Color, json := Json, default_fields := DefaultFields} = Options,
   Msg1 = palabres@internals@converter:format_message(Msg, Color),
   When = {string_field, palabres_utils_ffi:format_iso8601()},
-  Id = {string_field, palabres_utils_ffi:uuid()},
   Fields1 = palabres@internals@field:append(Fields, <<"when"/utf8>>, When),
-  Fields2 = palabres@internals@field:append(Fields1, <<"id"/utf8>>, Id),
-  Fields3 = palabres@internals@converter:append_at(Fields2, At, Color, Json),
+  Fields2 = palabres@internals@converter:append_at(Fields1, At, Color, Json),
+  Fields3 = lists:append(Fields2, DefaultFields),
   case Json of
     true -> palabres@internals@converter:to_json(Fields3, Msg1);
     false ->
@@ -232,7 +236,8 @@ format_palabres_report(Fields, Msg, At, #{color := Color, json := Json}) ->
 % Depending if JSON mode is activated or not:
 % - Wrap a `string` (UTF-8, `binary()`) in a `map()` to use it as foundation.
 % - Returns the string as-is if JSON mode is deactivated.
--spec json_wrap(binary(), true) -> map(); (binary(), false) -> binary().
+-spec json_wrap(binary(), true) -> map();
+               (binary(), false) -> binary().
 json_wrap(Content, Json) ->
   case {Json, Content} of
     {false, _} -> Content;
@@ -243,7 +248,7 @@ json_wrap(Content, Json) ->
 % Used only for non-Palabres log formatting. Because external logs can arrive,
 % a standard formatter runs on plain logs to turn them in a familiar Palabres
 % format.
--spec format_orddict(list({term(), term()})) -> binary().
+-spec format_orddict([{term(), term()}]) -> binary().
 format_orddict(Pairs) ->
   case Pairs of
     [] ->

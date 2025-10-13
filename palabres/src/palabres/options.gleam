@@ -25,7 +25,9 @@
 //// }
 //// ```
 
+import gleam/list
 import gleam/option.{type Option, None, Some}
+import palabres/internals/field
 import palabres/level
 
 /// Options to configure the logger. To create with [`defaults`](#defaults).
@@ -50,6 +52,7 @@ import palabres/level
 pub opaque type Options {
   Options(
     color: Option(Bool),
+    default_fields: field.Fields,
     json: Bool,
     level: level.Level,
     output: Output,
@@ -91,6 +94,7 @@ pub opaque type Output {
 pub fn defaults() -> Options {
   Options(
     color: None,
+    default_fields: [],
     json: False,
     level: level.Info,
     output: Stdout,
@@ -150,4 +154,69 @@ pub fn flush(file: Output, every interval: Int) -> Output {
     File(..) -> File(..file, flush_interval: Some(interval))
     Stdout -> Stdout
   }
+}
+
+/// Add a default string value in your structured data.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_string("service", "my_service")
+/// ```
+pub fn default_string(options: Options, key: String, value: String) -> Options {
+  let value = field.string(value)
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default float value in your structured data.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_float(rate, 0.2)
+/// ```
+pub fn default_float(options: Options, key: String, value: Float) -> Options {
+  let value = field.float(value)
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default int value in your structured data.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_string(version, 1)
+/// ```
+pub fn default_int(options: Options, key: String, value: Int) -> Options {
+  let value = field.int(value)
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default boolean value in your structured data.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_bool("activated", False)
+/// ```
+pub fn default_bool(options: Options, key: String, value: Bool) -> Options {
+  let value = field.bool(value)
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default list of values in your structured data.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_list("services", ["my_service", "other_service"], options.default_string)
+/// ```
+pub fn default_list(
+  options: Options,
+  key: String,
+  value: List(a),
+  add: fn(Options, String, a) -> Options,
+) -> Options {
+  let value = list.reverse(value)
+  use options, value <- list.fold(value, options)
+  add(options, key, value)
 }

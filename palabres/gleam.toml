@@ -19,6 +19,7 @@ tag-prefix = "palabres_"
 [dependencies]
 gleam_stdlib = ">= 0.60.0 and < 2.0.0"
 uuid_erl = ">= 2.0.0 and < 3.0.0"
+envoy = ">= 1.0.2 and < 2.0.0"
 
 [dev-dependencies]
 birdie = ">= 1.0.0 and < 2.0.0"

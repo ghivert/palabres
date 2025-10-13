@@ -39,20 +39,17 @@ fn clean(content: String) {
   content
   |> json.parse(decode.dict(decode.string, decode.dynamic))
   |> result.map(dict.delete(_, "when"))
-  |> result.map(dict.delete(_, "id"))
   |> result.map(encode)
   |> result.lazy_unwrap(fn() {
     content
     |> string.split(on: " ")
-    |> list.filter(remove_when_id)
+    |> list.filter(remove_when)
     |> string.join(with: " ")
   })
 }
 
-fn remove_when_id(part: String) {
-  let is_when = string.contains(part, "when")
-  let is_id = string.contains(part, "id")
-  !{ is_when || is_id }
+fn remove_when(part: String) {
+  !string.contains(part, "when")
 }
 
 @target(javascript)

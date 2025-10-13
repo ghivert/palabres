@@ -1,4 +1,6 @@
 import birdie
+import envoy
+import gleam/list
 import gleam/option
 import gleeunit
 import palabres
@@ -10,11 +12,8 @@ pub fn main() {
   gleeunit.main()
 }
 
-fn configure_logger(
-  color color: Bool,
-  json json: Bool,
-  level level: level.Level,
-) -> Nil {
+fn configure_logger(opts: Options) -> Nil {
+  let Options(color:, json:, level:, default_fields:) = opts
   options.defaults()
   |> options.color(color)
   |> options.json(json)
@@ -22,6 +21,10 @@ fn configure_logger(
   |> options.output(to: {
     options.file(test_utils.log_file)
     |> options.flush(every: 10)
+  })
+  |> list.fold(default_fields, _, fn(options, default_field) {
+    let #(key, value) = default_field
+    options.default_string(options, key, value)
   })
   |> options.style_default_logger(True)
   |> palabres.configure
@@ -56,13 +59,17 @@ fn example_messages() {
 }
 
 type Options {
-  Options(color: Bool, json: Bool, level: level.Level)
+  Options(
+    color: Bool,
+    json: Bool,
+    level: level.Level,
+    default_fields: List(#(String, String)),
+  )
 }
 
 fn run(options: Options, title: String) -> Nil {
   let title = test_utils.multitarget(title)
-  let Options(color:, json:, level:) = options
-  configure_logger(color, json, level)
+  configure_logger(options)
   example_messages()
   use <- test_utils.sleep(100)
   let content = test_utils.read_logs()
@@ -72,26 +79,62 @@ fn run(options: Options, title: String) -> Nil {
 }
 
 pub fn should_print_in_color_test() {
-  Options(color: True, json: False, level: Debug)
+  Options(color: True, json: False, level: Debug, default_fields: [])
   |> run("should print in color")
 }
 
 pub fn should_print_without_color_test() {
-  Options(color: False, json: False, level: Debug)
+  Options(color: False, json: False, level: Debug, default_fields: [])
   |> run("should print without color")
 }
 
 pub fn should_print_in_json_test() {
-  Options(color: False, json: True, level: Debug)
+  Options(color: False, json: True, level: Debug, default_fields: [])
   |> run("should print in JSON")
 }
 
 pub fn should_print_in_json_and_ignore_color_test() {
-  Options(color: True, json: True, level: Debug)
+  Options(color: True, json: True, level: Debug, default_fields: [])
   |> run("should print in JSON and ignore color")
 }
 
 pub fn should_ignore_low_levels_test() {
-  Options(color: True, json: True, level: Info)
+  Options(color: True, json: True, level: Info, default_fields: [])
   |> run("should ignore low levels")
+}
+
+pub fn should_use_default_fields_test() {
+  Options(color: True, json: False, level: Debug, default_fields: [
+    #("default_field1", "example1"),
+    #("default_field2", "example2"),
+    #("default_field1", "example3"),
+  ])
+  |> run("should use default fields")
+}
+
+pub fn should_use_json_default_fields_test() {
+  Options(color: True, json: True, level: Debug, default_fields: [
+    #("default_field1", "example1"),
+    #("default_field2", "example2"),
+    #("default_field1", "example3"),
+  ])
+  |> run("should use JSON default fields")
+}
+
+pub fn should_use_environment_variables_test() {
+  envoy.set("PALABRES_DEFAULT_FIELD1", "example1")
+  envoy.set("PALABRES_DEFAULT_FIELD2", "example2")
+  Options(color: True, json: False, level: Debug, default_fields: [])
+  |> run("should use default fields environment variables")
+  envoy.unset("PALABRES_DEFAULT_FIELD1")
+  envoy.unset("PALABRES_DEFAULT_FIELD2")
+}
+
+pub fn should_use_json_environment_variables_test() {
+  envoy.set("PALABRES_DEFAULT_FIELD1", "example1")
+  envoy.set("PALABRES_DEFAULT_FIELD2", "example2")
+  Options(color: True, json: True, level: Debug, default_fields: [])
+  |> run("should use JSON default fields environment variables")
+  envoy.unset("PALABRES_DEFAULT_FIELD1")
+  envoy.unset("PALABRES_DEFAULT_FIELD2")
 }

@@ -31,6 +31,20 @@ pub const float = FloatField
 /// Convert a float to `null`.
 pub const null = NullField
 
+pub fn default_fields_to_dynamic(
+  fields: List(#(String, List(Field))),
+) -> Dynamic {
+  dynamic.properties({
+    use #(key, values) <- list.map(fields)
+    #(dynamic.string(key), {
+      dynamic.list({
+        use value <- list.map(values)
+        to_dynamic(value)
+      })
+    })
+  })
+}
+
 /// Convert a `Field` to a `Dynamic` value.
 pub fn to_dynamic(value: Field) -> Dynamic {
   case value {

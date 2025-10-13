@@ -95,8 +95,14 @@
 //// every logs _should go_ through the Palabres package, otherwise the logger
 //// won't be able to format them accordingly.
 
+import envoy
+import gleam/bool
+import gleam/dict
+import gleam/float
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, Some}
+import gleam/string
 import palabres/internals/field.{type Fields}
 import palabres/level
 import palabres/options.{type Options}
@@ -105,9 +111,33 @@ import palabres/options.{type Options}
 /// configured once at startup. Select your options, and run configurations, to
 /// get Palabres logger running. Each logger call will then go through Palabres
 /// on BEAM. On JavaScript, calling `palabres` functions are still required.
+pub fn configure(options: Options) -> Nil {
+  do_configure({
+    use options, key, value <- dict.fold(envoy.all(), options)
+    let key = string.lowercase(key)
+    let is_palabres_key = string.starts_with(key, "palabres_")
+    use <- bool.guard(when: !is_palabres_key, return: options)
+    let key = string.drop_start(key, 9)
+    case value {
+      "true" -> options.default_bool(options, key, True)
+      "false" -> options.default_bool(options, key, False)
+      _ -> {
+        case float.parse(value) {
+          Ok(value) -> options.default_float(options, key, value)
+          Error(_) ->
+            case int.parse(value) {
+              Ok(value) -> options.default_int(options, key, value)
+              Error(_) -> options.default_string(options, key, value)
+            }
+        }
+      }
+    }
+  })
+}
+
 @external(erlang, "palabres_ffi", "configure")
 @external(javascript, "./palabres.ffi.mjs", "configure")
-pub fn configure(options: Options) -> Nil
+fn do_configure(options: Options) -> Nil
 
 /// Log instance, holding the structured data. Can be instanciated with
 /// corresponding "level" functions: [`emergency`](#emergency),
@@ -466,6 +496,6 @@ fn do_log(
 ) -> Nil
 
 fn init(level: level.Level, message: String) {
-  let fields = [#("at", []), #("id", []), #("when", [])]
+  let fields = [#("at", []), #("when", [])]
   Log(level:, fields:, message:, at: option.None)
 }
