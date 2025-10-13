@@ -162,6 +162,7 @@ pub fn flush(file: Output, every interval: Int) -> Output {
 /// options.defaults()
 /// |> options.default_string("service", "my_service")
 /// ```
+@internal
 pub fn default_string(options: Options, key: String, value: String) -> Options {
   let value = field.string(value)
   let default_fields = field.append(options.default_fields, key, value)
@@ -174,6 +175,7 @@ pub fn default_string(options: Options, key: String, value: String) -> Options {
 /// options.defaults()
 /// |> options.default_float(rate, 0.2)
 /// ```
+@internal
 pub fn default_float(options: Options, key: String, value: Float) -> Options {
   let value = field.float(value)
   let default_fields = field.append(options.default_fields, key, value)
@@ -186,6 +188,7 @@ pub fn default_float(options: Options, key: String, value: Float) -> Options {
 /// options.defaults()
 /// |> options.default_string(version, 1)
 /// ```
+@internal
 pub fn default_int(options: Options, key: String, value: Int) -> Options {
   let value = field.int(value)
   let default_fields = field.append(options.default_fields, key, value)
@@ -198,6 +201,7 @@ pub fn default_int(options: Options, key: String, value: Int) -> Options {
 /// options.defaults()
 /// |> options.default_bool("activated", False)
 /// ```
+@internal
 pub fn default_bool(options: Options, key: String, value: Bool) -> Options {
   let value = field.bool(value)
   let default_fields = field.append(options.default_fields, key, value)
@@ -210,6 +214,7 @@ pub fn default_bool(options: Options, key: String, value: Bool) -> Options {
 /// options.defaults()
 /// |> options.default_list("services", ["my_service", "other_service"], options.default_string)
 /// ```
+@internal
 pub fn default_list(
   options: Options,
   key: String,
@@ -219,4 +224,76 @@ pub fn default_list(
   let value = list.reverse(value)
   use options, value <- list.fold(value, options)
   add(options, key, value)
+}
+
+/// Add a default string value in your structured data, computed only when the
+/// log is printed.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_lazy_string("service", fn() { "my_service" })
+/// ```
+@internal
+pub fn default_lazy_string(
+  options: Options,
+  key: String,
+  value: fn() -> String,
+) -> Options {
+  let value = field.lazy(fn() { field.string(value()) })
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default float value in your structured data, computed only when the
+/// log is printed.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_lazy_float(rate, fn() { 0.2 })
+/// ```
+@internal
+pub fn default_lazy_float(
+  options: Options,
+  key: String,
+  value: fn() -> Float,
+) -> Options {
+  let value = field.lazy(fn() { field.float(value()) })
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default int value in your structured data, computed only when the
+/// log is printed.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_lazy_string(version, fn() { 1 })
+/// ```
+@internal
+pub fn default_lazy_int(
+  options: Options,
+  key: String,
+  value: fn() -> Int,
+) -> Options {
+  let value = field.lazy(fn() { field.int(value()) })
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
+}
+
+/// Add a default boolean value in your structured data, computed only when the
+/// log is printed.
+///
+/// ```gleam
+/// options.defaults()
+/// |> options.default_bool("activated", fn() { False })
+/// ```
+@internal
+pub fn default_lazy_bool(
+  options: Options,
+  key: String,
+  value: fn() -> Bool,
+) -> Options {
+  let value = field.lazy(fn() { field.bool(value()) })
+  let default_fields = field.append(options.default_fields, key, value)
+  Options(..options, default_fields:)
 }

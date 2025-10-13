@@ -13,18 +13,21 @@ pub fn main() {
 }
 
 fn configure_logger(opts: Options) -> Nil {
-  let Options(color:, json:, level:, default_fields:) = opts
   options.defaults()
-  |> options.color(color)
-  |> options.json(json)
-  |> options.level(level)
+  |> options.color(opts.color)
+  |> options.json(opts.json)
+  |> options.level(opts.level)
   |> options.output(to: {
     options.file(test_utils.log_file)
     |> options.flush(every: 10)
   })
-  |> list.fold(default_fields, _, fn(options, default_field) {
+  |> list.fold(opts.default_fields, _, fn(options, default_field) {
     let #(key, value) = default_field
     options.default_string(options, key, value)
+  })
+  |> list.fold(opts.default_lazy_fields, _, fn(options, default_lazy_field) {
+    let #(key, value) = default_lazy_field
+    options.default_lazy_string(options, key, value)
   })
   |> options.style_default_logger(True)
   |> palabres.configure
@@ -64,10 +67,11 @@ type Options {
     json: Bool,
     level: level.Level,
     default_fields: List(#(String, String)),
+    default_lazy_fields: List(#(String, fn() -> String)),
   )
 }
 
-fn run(options: Options, title: String) -> Nil {
+fn run(title: String, options: Options, next: fn() -> Nil) -> Nil {
   let title = test_utils.multitarget(title)
   configure_logger(options)
   example_messages()
@@ -76,56 +80,154 @@ fn run(options: Options, title: String) -> Nil {
   test_utils.destroy_logger()
   test_utils.remove_logs()
   birdie.snap(title:, content:)
+  next()
 }
 
 pub fn should_print_in_color_test() {
-  Options(color: True, json: False, level: Debug, default_fields: [])
-  |> run("should print in color")
+  use <- run("should print in color", {
+    Options(
+      color: True,
+      json: False,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
+  Nil
 }
 
 pub fn should_print_without_color_test() {
-  Options(color: False, json: False, level: Debug, default_fields: [])
-  |> run("should print without color")
+  use <- run("should print without color", {
+    Options(
+      color: False,
+      json: False,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
+  Nil
 }
 
 pub fn should_print_in_json_test() {
-  Options(color: False, json: True, level: Debug, default_fields: [])
-  |> run("should print in JSON")
+  use <- run("should print in JSON", {
+    Options(
+      color: False,
+      json: True,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
+  Nil
 }
 
 pub fn should_print_in_json_and_ignore_color_test() {
-  Options(color: True, json: True, level: Debug, default_fields: [])
-  |> run("should print in JSON and ignore color")
+  use <- run("should print in JSON and ignore color", {
+    Options(
+      color: True,
+      json: True,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
+  Nil
 }
 
 pub fn should_ignore_low_levels_test() {
-  Options(color: True, json: True, level: Info, default_fields: [])
-  |> run("should ignore low levels")
+  use <- run("should ignore low levels", {
+    Options(
+      color: True,
+      json: True,
+      level: Info,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
+  Nil
 }
 
 pub fn should_use_default_fields_test() {
-  Options(color: True, json: False, level: Debug, default_fields: [
-    #("default_field1", "example1"),
-    #("default_field2", "example2"),
-    #("default_field1", "example3"),
-  ])
-  |> run("should use default fields")
+  use <- run("should use default fields", {
+    Options(
+      color: True,
+      json: False,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [
+        #("default_field1", "example1"),
+        #("default_field2", "example2"),
+        #("default_field1", "example3"),
+      ],
+    )
+  })
+  Nil
 }
 
 pub fn should_use_json_default_fields_test() {
-  Options(color: True, json: True, level: Debug, default_fields: [
-    #("default_field1", "example1"),
-    #("default_field2", "example2"),
-    #("default_field1", "example3"),
-  ])
-  |> run("should use JSON default fields")
+  use <- run("should use JSON default fields", {
+    Options(
+      color: True,
+      json: True,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [
+        #("default_field1", "example1"),
+        #("default_field2", "example2"),
+        #("default_field1", "example3"),
+      ],
+    )
+  })
+  Nil
+}
+
+pub fn should_use_default_lazy_fields_test() {
+  use <- run("should use default lazy fields", {
+    Options(
+      color: True,
+      json: False,
+      level: Debug,
+      default_fields: [],
+      default_lazy_fields: [
+        #("default_lazy_field1", fn() { "lazy-example1" }),
+        #("default_lazy_field2", fn() { "lazy-example2" }),
+        #("default_lazy_field1", fn() { "lazy-example3" }),
+      ],
+    )
+  })
+  Nil
+}
+
+pub fn should_use_json_default_lazy_fields_test() {
+  use <- run("should use JSON default lazy fields", {
+    Options(
+      color: True,
+      json: True,
+      level: Debug,
+      default_fields: [],
+      default_lazy_fields: [
+        #("default_lazy_field1", fn() { "lazy-example1" }),
+        #("default_lazy_field2", fn() { "lazy-example2" }),
+        #("default_lazy_field1", fn() { "lazy-example3" }),
+      ],
+    )
+  })
+  Nil
 }
 
 pub fn should_use_environment_variables_test() {
   envoy.set("PALABRES_DEFAULT_FIELD1", "example1")
   envoy.set("PALABRES_DEFAULT_FIELD2", "example2")
-  Options(color: True, json: False, level: Debug, default_fields: [])
-  |> run("should use default fields environment variables")
+  use <- run("should use default fields environment variables", {
+    Options(
+      color: True,
+      json: False,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
   envoy.unset("PALABRES_DEFAULT_FIELD1")
   envoy.unset("PALABRES_DEFAULT_FIELD2")
 }
@@ -133,8 +235,15 @@ pub fn should_use_environment_variables_test() {
 pub fn should_use_json_environment_variables_test() {
   envoy.set("PALABRES_DEFAULT_FIELD1", "example1")
   envoy.set("PALABRES_DEFAULT_FIELD2", "example2")
-  Options(color: True, json: True, level: Debug, default_fields: [])
-  |> run("should use JSON default fields environment variables")
+  use <- run("should use JSON default fields environment variables", {
+    Options(
+      color: True,
+      json: True,
+      level: Debug,
+      default_lazy_fields: [],
+      default_fields: [],
+    )
+  })
   envoy.unset("PALABRES_DEFAULT_FIELD1")
   envoy.unset("PALABRES_DEFAULT_FIELD2")
 }

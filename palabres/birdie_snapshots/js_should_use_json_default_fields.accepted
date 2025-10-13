@@ -1,0 +1,7 @@
+---
+version: 1.4.1
+title: js_should use JSON default fields
+---
+{"test_field1":["test_value2","test_value1"],"level":"debug","test_field2":"test_value1","__message":"Debug testing message","at":"palabres_test.messages","default_field1":["example3","example1"],"default_field2":"example2"}
+{"test_field1":["test_value2","test_value1"],"level":"info","test_field2":"test_value1","__message":"Info testing message","at":"palabres_test.messages","default_field1":["example3","example1"],"default_field2":"example2"}
+{"test_field1":"test_value1","level":"alert","test_field2":1,"test_field3":1,"__message":"Alert testing message","test_field4":null,"test_field5":1,"at":"palabres_test.messages","default_field1":["example3","example1"],"default_field2":"example2"}

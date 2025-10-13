@@ -1,0 +1,7 @@
+---
+version: 1.3.1
+title: erlang_should use JSON default lazy fields
+---
+{"__message":"Debug testing message","at":"palabres_test.messages","default_lazy_field1":["lazy-example3","lazy-example1"],"default_lazy_field2":"lazy-example2","level":"debug","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
+{"__message":"Info testing message","at":"palabres_test.messages","default_lazy_field1":["lazy-example3","lazy-example1"],"default_lazy_field2":"lazy-example2","level":"info","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
+{"__message":"Alert testing message","at":"palabres_test.messages","default_lazy_field1":["lazy-example3","lazy-example1"],"default_lazy_field2":"lazy-example2","level":"alert","test_field1":"test_value1","test_field2":1,"test_field3":1.0,"test_field4":null,"test_field5":1}

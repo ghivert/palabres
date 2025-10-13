@@ -10,6 +10,7 @@ pub opaque type Field {
   BoolField(Bool)
   IntField(Int)
   FloatField(Float)
+  LazyField(fn() -> Field)
   NullField
 }
 
@@ -28,8 +29,11 @@ pub const int = IntField
 /// Convert a float to a `Field`.
 pub const float = FloatField
 
-/// Convert a float to `null`.
+/// Converst `null` to a `Field`.
 pub const null = NullField
+
+/// Lazify a `Field`.
+pub const lazy = LazyField
 
 pub fn default_fields_to_dynamic(
   fields: List(#(String, List(Field))),
@@ -53,6 +57,11 @@ pub fn to_dynamic(value: Field) -> Dynamic {
     IntField(int) -> dynamic.int(int)
     StringField(string) -> dynamic.string(string)
     NullField -> do_null()
+    LazyField(fun) ->
+      case fun() {
+        LazyField(_) -> panic as "Impossible state"
+        result -> to_dynamic(result)
+      }
   }
 }
 
@@ -65,6 +74,11 @@ pub fn to_string(value: Field) -> String {
     IntField(int) -> int.to_string(int)
     StringField(string) -> string
     NullField -> "null"
+    LazyField(fun) ->
+      case fun() {
+        LazyField(_) -> panic as "Impossible state"
+        result -> to_string(result)
+      }
   }
 }
 

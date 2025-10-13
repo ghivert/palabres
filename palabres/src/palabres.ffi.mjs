@@ -1,6 +1,7 @@
 import * as $converter from './palabres/internals/converter.mjs'
 import * as $field from './palabres/internals/field.mjs'
 import * as levels from './palabres/level.ffi.mjs'
+import * as $list from '../gleam_stdlib/gleam/list.mjs'
 
 let logger = null
 
@@ -18,6 +19,7 @@ export function configure(options) {
     json: options.json,
     level: options.level,
     output: options.output,
+    defaultFields: options.default_fields,
   })
 }
 
@@ -37,6 +39,7 @@ class Logger {
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
+    this.defaultFields = options.defaultFields
     const timer = this.output.flush_interval[0]
     if (timer) this.interval = setInterval(() => this.#flush(), timer)
   }
@@ -54,14 +57,14 @@ class Logger {
   }
 
   #formatMessage(lvl, fields, message, at) {
-    const id = $field.string(uuid())
     const when = $field.string(formatIso8601())
-    const f1 = $field.append($field.append(fields, 'id', id), 'when', when)
-    const f2 = $converter.append_at(f1, at, this.#isColor, this.#isJson)
-    if (this.#isJson) return this.#formatJSON(lvl, f2, message)
+    const f1 = $field.append(fields, 'when', when)
+    const f2 = $list.append(f1, this.defaultFields)
+    const f3 = $converter.append_at(f2, at, this.#isColor, this.#isJson)
+    if (this.#isJson) return this.#formatJSON(lvl, f3, message)
     const msg = $converter.format_message(message, this.#isColor)
-    const f3 = $converter.to_spaced_query_string(f2, this.#isColor)
-    return `${levels.format(lvl, this.color)} ${f3} ${msg}`
+    const f4 = $converter.to_spaced_query_string(f3, this.#isColor)
+    return `${levels.format(lvl, this.color)} ${f4} ${msg}`
   }
 
   #formatJSON(lvl, fields, message) {
