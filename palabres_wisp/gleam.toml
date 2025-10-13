@@ -1,5 +1,5 @@
 name = "palabres_wisp"
-version = "1.0.0"
+version = "1.0.1"
 target = "erlang"
 
 description = "Wisp integration for palabres, an opinionated logger for Gleam"

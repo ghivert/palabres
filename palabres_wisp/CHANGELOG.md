@@ -1,3 +1,7 @@
+### v1.0.1 - 2025-10-13
+
+- Switch log level to `INFO`.
+
 ### v1.0.0 - 2025-08-09
 
 - No changes, dependency bump.
