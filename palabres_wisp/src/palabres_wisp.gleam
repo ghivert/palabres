@@ -17,7 +17,7 @@ import wisp.{type Request, type Response}
 pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
   let response = handler()
   let method = string.uppercase(http.method_to_string(req.method))
-  palabres.notice("")
+  palabres.info("")
   |> palabres.int("status", response.status)
   |> palabres.string("method", method)
   |> palabres.string("where", req.path)
