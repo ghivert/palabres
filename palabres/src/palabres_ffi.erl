@@ -200,7 +200,7 @@ format_string_msg(Msg, Options) ->
   case Json of
     true ->
       DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
-      JsonData0 = #{message => Msg},
+      JsonData0 = #{'__message' => Msg},
       JsonData1 = maps:put("when", When, JsonData0),
       JsonData2 = maps:merge(JsonData1, DefaultFields1),
       JsonData2;

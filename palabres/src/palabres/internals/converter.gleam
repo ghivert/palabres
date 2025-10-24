@@ -17,7 +17,7 @@ pub fn to_spaced_query_string(fields: Fields, colored: Bool) -> String {
   fields
   |> list.filter_map(fn(field) {
     let #(key, values) = field
-    use <- bool.guard(when: list.is_empty(values), return: Error(Nil))
+    use <- bool.guard(when: key == "at" && values == [], return: Error(Nil))
     Ok(to_query_part(key, values, colored))
   })
   |> string.join(with: " ")
@@ -30,6 +30,7 @@ pub fn to_json(
 ) -> dict.Dict(String, dynamic.Dynamic) {
   let json_dict = init_json_dict(message)
   use json_dict, #(key, values) <- list.fold(fields, json_dict)
+  use <- bool.guard(when: key == "at" && values == [], return: json_dict)
   dict.insert(json_dict, key, {
     case values {
       [value] -> field.to_dynamic(value)

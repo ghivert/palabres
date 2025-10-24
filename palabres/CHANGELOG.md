@@ -1,3 +1,7 @@
+### v1.0.2 - 2025-10-24
+
+- Fix a bug where `at` was displayed in JSON output.
+
 ### v1.0.1 - 2025-10-13
 
 - Remove `id` from the generated log, as it's often useless in the log.
