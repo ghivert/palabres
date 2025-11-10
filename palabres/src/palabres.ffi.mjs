@@ -40,8 +40,10 @@ class Logger {
     this.json = options.json
     this.output = options.output
     this.defaultFields = options.defaultFields
-    const timer = this.output.flush_interval[0]
-    if (timer) this.interval = setInterval(() => this.#flush(), timer)
+    if (this.output.flush_interval) {
+      const timer = this.output.flush_interval[0]
+      if (timer) this.interval = setInterval(() => this.#flush(), timer)
+    }
   }
 
   log(lvl, fields, message, at) {

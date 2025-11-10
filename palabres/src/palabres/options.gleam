@@ -156,6 +156,10 @@ pub fn flush(file: Output, every interval: Int) -> Output {
   }
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default string value in your structured data.
 ///
 /// ```gleam
@@ -169,6 +173,10 @@ pub fn default_string(options: Options, key: String, value: String) -> Options {
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default float value in your structured data.
 ///
 /// ```gleam
@@ -182,6 +190,10 @@ pub fn default_float(options: Options, key: String, value: Float) -> Options {
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default int value in your structured data.
 ///
 /// ```gleam
@@ -195,6 +207,10 @@ pub fn default_int(options: Options, key: String, value: Int) -> Options {
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default boolean value in your structured data.
 ///
 /// ```gleam
@@ -208,6 +224,10 @@ pub fn default_bool(options: Options, key: String, value: Bool) -> Options {
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default list of values in your structured data.
 ///
 /// ```gleam
@@ -226,6 +246,10 @@ pub fn default_list(
   add(options, key, value)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default string value in your structured data, computed only when the
 /// log is printed.
 ///
@@ -244,6 +268,10 @@ pub fn default_lazy_string(
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default float value in your structured data, computed only when the
 /// log is printed.
 ///
@@ -262,6 +290,10 @@ pub fn default_lazy_float(
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default int value in your structured data, computed only when the
 /// log is printed.
 ///
@@ -280,6 +312,10 @@ pub fn default_lazy_int(
   Options(..options, default_fields:)
 }
 
+/// > Congrats, you found a secret function! As every hidden, secret function,
+/// > it can be subject to changes at any time. Consider using this API as
+/// > unsafe.
+///
 /// Add a default boolean value in your structured data, computed only when the
 /// log is printed.
 ///

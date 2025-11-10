@@ -1,3 +1,7 @@
+### v1.0.3 - 2025-11-10
+
+- Fix a bug where JavaScript `Logger` was failing when `output` was `Stdout`.
+
 ### v1.0.2 - 2025-10-24
 
 - Fix a bug where `at` was displayed in JSON output.
