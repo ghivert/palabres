@@ -1,3 +1,7 @@
+### v1.0.4 - 2025-12-24
+
+- Adapt code to Gleam 1.13.0.
+
 ### v1.0.3 - 2025-11-10
 
 - Fix a bug where JavaScript `Logger` was failing when `output` was `Stdout`.

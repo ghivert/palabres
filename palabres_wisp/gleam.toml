@@ -1,6 +1,7 @@
 name = "palabres_wisp"
-version = "1.0.1"
+version = "1.0.2"
 target = "erlang"
+gleam = ">= 1.13.0"
 
 description = "Wisp integration for palabres, an opinionated logger for Gleam"
 licences = ["MIT"]
@@ -20,7 +21,7 @@ tag-prefix = "palabres_wisp_"
 gleam_http = ">= 3.5.0 and < 5.0.0"
 gleam_stdlib = ">= 0.60.0 and < 2.0.0"
 palabres = ">= 0.4.0 and < 2.0.0"
-wisp = ">= 1.0.0 and < 2.0.0"
+wisp = ">= 1.0.0 and < 3.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.4.0 and < 2.0.0"
