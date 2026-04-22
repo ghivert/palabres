@@ -1,7 +1,6 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
-import gleam/function
 import gleam/json
 import gleam/list
 import gleam/result
@@ -31,8 +30,8 @@ pub fn read_logs() {
 }
 
 pub fn remove_logs() {
-  use _ <- function.tap(Nil)
   let _ = simplifile.delete(log_file)
+  Nil
 }
 
 fn clean(content: String) {
