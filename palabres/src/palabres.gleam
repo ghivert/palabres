@@ -112,8 +112,14 @@ import palabres/options.{type Options}
 /// get Palabres logger running. Each logger call will then go through Palabres
 /// on BEAM. On JavaScript, calling `palabres` functions are still required.
 pub fn configure(options: Options) -> Nil {
+  // Environment variables are sorted to keep the fields order deterministic,
+  // as `envoy.all()` iteration order depends on the runtime.
+  let environment =
+    list.sort(dict.to_list(envoy.all()), by: fn(a, b) {
+      string.compare(a.0, b.0)
+    })
   do_configure({
-    use options, key, value <- dict.fold(envoy.all(), options)
+    use options, #(key, value) <- list.fold(environment, options)
     let key = string.lowercase(key)
     let is_palabres_key = string.starts_with(key, "palabres_")
     use <- bool.guard(when: !is_palabres_key, return: options)

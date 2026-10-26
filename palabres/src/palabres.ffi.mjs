@@ -1,6 +1,7 @@
 import * as $converter from './palabres/internals/converter.mjs'
 import * as $field from './palabres/internals/field.mjs'
 import * as levels from './palabres/level.ffi.mjs'
+import * as $dict from '../gleam_stdlib/gleam/dict.mjs'
 import * as $list from '../gleam_stdlib/gleam/list.mjs'
 
 let logger = null
@@ -71,10 +72,12 @@ class Logger {
 
   #formatJSON(lvl, fields, message) {
     const message_ = $converter.format_message(message, this.#isColor)
-    const data = $converter
-      .to_json(fields, message_)
-      .entries()
+    const data = $dict
+      .to_list($converter.to_json(fields, message_))
+      .toArray()
       .map(([key, value]) => [key, value?.toArray?.() ?? value ?? null])
+      // Keys are sorted to get a deterministic output, consistent with Erlang.
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
     return JSON.stringify(data_)
   }
