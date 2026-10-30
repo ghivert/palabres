@@ -23,6 +23,8 @@
   fields are scalars in JSON, like on Palabres logs, instead of arrays.
 - Use the timestamp of the event for `when` on Erlang, with millisecond
   precision like JavaScript, instead of the formatting time in seconds.
+- Send Palabres logs as a valid `logger` report on Erlang, `#{palabres =>
+  {Fields, Message, At}}`, so that third-party handlers can receive them.
 
 ### v1.0.4 - 2025-12-24
 

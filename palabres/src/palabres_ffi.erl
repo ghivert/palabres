@@ -106,8 +106,8 @@ format_options(Color, Options) ->
 %   logger, and allow other logs to flow.
 handler_filter(Event, Extra) ->
   case {Event, Extra} of
-    {#{msg := {report, [{palabres, _, _, _}]}}, stop} -> stop;
-    {#{msg := {report, [{palabres, _, _, _}]}}, continue} -> Event;
+    {#{msg := {report, #{palabres := {_, _, _}}}}, stop} -> stop;
+    {#{msg := {report, #{palabres := {_, _, _}}}}, continue} -> Event;
     {_, stop} -> Event;
     {_, continue} -> stop
   end.
@@ -137,10 +137,11 @@ read_variable(Name) ->
     _ -> true
   end.
 
-% Helper to run `log` from Gleam `palabres` module. Format the log accordingly
-% to Palabres requirements in the logger.
-log(Level, Msg, Text, At) ->
-  logger:log(Level, [{palabres, Msg, Text, At}]),
+% Helper to run `log` from Gleam `palabres` module. The log is sent as a
+% `logger:report()`, a map, holding the Palabres data under the `palabres`
+% key, so that any other handler receives a valid report.
+log(Level, Fields, Msg, At) ->
+  logger:log(Level, #{palabres => {Fields, Msg, At}}),
   nil.
 
 % Locate the function creating the log, by reading the current stack trace and
@@ -244,7 +245,7 @@ format_msg(Report0, Meta, Options0) ->
   case Report0 of
     {string, Msg} ->
       format_string_msg(Msg, Options);
-    {report, [{palabres, Fields, Msg, At}]} ->
+    {report, #{palabres := {Fields, Msg, At}}} ->
       format_palabres_report(Fields, Msg, At, Options);
     {report, Report1} when is_map(Report1); is_list(Report1) ->
       format_report(Report1, Meta, Options);
@@ -404,9 +405,9 @@ chardata_to_binary(Chardata) ->
     _ -> inspect(Chardata)
   end.
 
-% Format standard Palabres reports. Palabres reports are identified in tuples
-% starting with atom `palabres`. It is expected that no one will send a tuple
-% starting with `palabres` as first argument.
+% Format standard Palabres reports. Palabres reports are identified by their
+% `palabres` key. It is expected that no one will send a report with a
+% `palabres` key holding a 3-tuple.
 format_palabres_report(Fields, Msg, At, Options) ->
   #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
   #{timestamp := When} = Options,
