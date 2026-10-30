@@ -111,7 +111,7 @@ class Logger {
   log(lvl, fields, message, at) {
     if (levels.asInt(lvl) < this.level) return
     const msg = this.#formatMessage(lvl, fields, message, at)
-    if (this.output.filename) return this.buffer.push(msg)
+    if (this.output.filename) this.buffer.push(msg)
     else console.log(msg)
   }
 
