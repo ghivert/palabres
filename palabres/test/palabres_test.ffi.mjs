@@ -1,8 +1,15 @@
+// The continuation can itself sleep, and returns the promise of that sleep:
+// it is awaited, so that a test is over only once every nested continuation
+// has run. A throw in the continuation rejects the promise, and is reported
+// as a test failure instead of crashing the run.
 export function sleep(timeout, continuation) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     setTimeout(() => {
-      continuation()
-      resolve()
+      try {
+        Promise.resolve(continuation()).then(resolve, reject)
+      } catch (error) {
+        reject(error)
+      }
     }, timeout)
   })
 }

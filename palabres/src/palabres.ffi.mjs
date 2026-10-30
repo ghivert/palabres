@@ -1,3 +1,5 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import * as $converter from './palabres/internals/converter.mjs'
 import * as levels from './palabres/level.ffi.mjs'
 import { Location } from './palabres/internals/location.mjs'
@@ -12,6 +14,9 @@ function formatIso8601() {
 }
 
 export function configure(options) {
+  // When `configure` is called a second time, the previous logger must
+  // release its file before being replaced.
+  logger?.destroy()
   logger = new Logger({
     autoAt: options.auto_at,
     autoWhen: options.auto_when,
@@ -94,7 +99,6 @@ export function destroy() {
 
 class Logger {
   constructor(options) {
-    this.buffer = []
     this.autoAt = options.autoAt
     this.autoWhen = options.autoWhen
     this.level = levels.asInt(options.level)
@@ -102,22 +106,38 @@ class Logger {
     this.json = options.json
     this.output = options.output
     this.defaultFields = options.defaultFields
-    if (this.output.flush_interval) {
-      const timer = this.output.flush_interval[0]
-      if (timer) this.interval = setInterval(() => this.#flush(), timer)
-    }
+    // A file output goes through a single stream, opened in append mode for
+    // the whole life of the logger. The stream queues the lines and writes
+    // them as fast as the file accepts them, and pending writes keep the
+    // process alive until they are done, so nothing is lost at exit.
+    // `flush_interval` has thus no effect on JavaScript.
+    if (this.output.filename) this.stream = this.#openStream(this.output.filename)
   }
 
   log(lvl, fields, message, at) {
     if (levels.asInt(lvl) < this.level) return
     const msg = this.#formatMessage(lvl, fields, message, at)
-    if (this.output.filename) this.buffer.push(msg)
+    if (this.stream) this.stream.write(msg + '\n')
     else console.log(msg)
   }
 
   destroy() {
-    clearInterval(this.interval)
-    this.#flush()
+    this.stream?.end()
+    this.stream = null
+  }
+
+  #openStream(filename) {
+    fs.mkdirSync(path.dirname(filename), { recursive: true })
+    const stream = fs.createWriteStream(filename, { flags: 'a' })
+    // An unwritable file must not crash the application: it is reported
+    // once on stderr, and the logs are dropped.
+    let reported = false
+    stream.on('error', error => {
+      if (reported) return
+      reported = true
+      console.error(`palabres: unable to write logs in ${filename}: ${error.message}`)
+    })
+    return stream
   }
 
   #formatMessage(lvl, fields, message, at) {
@@ -158,16 +178,5 @@ class Logger {
   #readColor() {
     const flags = [process.env.NO_COLOUR, process.env.NO_COLOR]
     return !flags.some(flag => flag !== undefined && flag !== '')
-  }
-
-  async #flush() {
-    const filename = this.output.filename
-    const fs = await import('node:fs')
-    const path = await import('node:path')
-    const dirname = path.dirname(filename)
-    await fs.promises.mkdir(dirname, { recursive: true })
-    const message = this.buffer.join('\n')
-    this.buffer = []
-    await fs.promises.appendFile(filename, message)
   }
 }

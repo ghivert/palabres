@@ -31,6 +31,11 @@
   colour, including `false`; an empty value keeps it.
 - Reconfigure the handler when `palabres.configure` is called a second time on
   Erlang, instead of silently keeping the first configuration.
+- Fix the file output on JavaScript: logs go through a single stream, so each
+  log ends up on its own line, and a file output without `options.flush` writes
+  too. `options.flush` has no effect on JavaScript, where logs are written as
+  they come. Every log now ends with a newline, as on Erlang, which is the only
+  change in the JavaScript snapshots.
 
 ### v1.0.4 - 2025-12-24
 
