@@ -238,8 +238,9 @@ format_level(Level, #{color := Color}) ->
 % while every other log will go through a standard formatter. In both case,
 % Palabres tries to format the log in a nicely way to be easily parsed by a
 % machine, or read by a human.
-format_msg(Report0, Meta, Options) ->
-  #{json := Json} = Options,
+format_msg(Report0, Meta, Options0) ->
+  #{json := Json} = Options0,
+  Options = Options0#{timestamp => format_time(Meta)},
   case Report0 of
     {string, Msg} ->
       format_string_msg(Msg, Options);
@@ -356,6 +357,17 @@ charlist_to_binary(_) ->
 inspect(Term) ->
   unicode:characters_to_binary(io_lib:format("~0tp", [Term])).
 
+% Format the timestamp of the event, the `time` of its metadata in
+% microseconds since the epoch, as ISO 8601 in UTC with milliseconds, like
+% the JavaScript target: `2024-12-15T15:59:17.123Z`. Every event carries a
+% `time`, as `logger` adds it when missing, so the fallback is theoretical.
+-spec format_time(logger:metadata()) -> binary().
+format_time(Meta) ->
+  Time = maps:get(time, Meta, logger:timestamp()),
+  Options = [{unit, millisecond}, {offset, "Z"}],
+  Formatted = calendar:system_time_to_rfc3339(Time div 1000, Options),
+  unicode:characters_to_binary(Formatted).
+
 % Format `io:format/2` style messages, the most common form of Erlang logs,
 % like `logger:info("user ~p logged in", [Id])`. A bad format string or
 % mismatched arguments must never crash the logger: the format and its
@@ -397,8 +409,8 @@ chardata_to_binary(Chardata) ->
 % starting with `palabres` as first argument.
 format_palabres_report(Fields, Msg, At, Options) ->
   #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
+  #{timestamp := When} = Options,
   Msg1 = palabres@internals@converter:format_message(Msg, Color),
-  When = palabres_utils_ffi:format_iso8601(),
   Fields1 = lists:append(Fields, DefaultFields),
   Fields2 = prepend_when(Fields1, When, AutoWhen),
   Fields3 = palabres@internals@converter:prepend_at(Fields2, At, Color, Json),

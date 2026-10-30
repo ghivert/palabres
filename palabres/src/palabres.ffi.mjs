@@ -7,7 +7,7 @@ import { Some, None } from '../gleam_stdlib/gleam/option.mjs'
 
 let logger = null
 
-export function formatIso8601() {
+function formatIso8601() {
   return new Date().toISOString()
 }
 

@@ -28,6 +28,17 @@ fn json(kind: String) -> String {
 }
 
 @target(erlang)
+pub fn should_use_event_timestamp_test() {
+  let when = "when=" <> timestamp
+  assert format_event("palabres", False, True)
+    == "level=info " <> when <> " user=42 hello\n"
+  assert format_event("format_args", False, True)
+    == "level=info " <> when <> " user 42 logged in\n"
+  assert format_event("map_report", False, True)
+    == "level=info " <> when <> " action=login user=42\n"
+}
+
+@target(erlang)
 pub fn should_format_io_format_messages_test() {
   assert text("format_args") == "level=info user 42 logged in\n"
   assert json("format_args")

@@ -50,6 +50,10 @@ format_event(Kind, Json, AutoWhen, Defaults) ->
     true -> iolist_to_binary(json:encode(json:decode(string:trim(Formatted))))
   end.
 
+% Palabres log, as sent by `palabres_ffi:log/4`.
+event(<<"palabres">>) ->
+  Fields = [{<<"user">>, [{int_field, 42}]}],
+  {{report, [{palabres, Fields, <<"hello">>, none}]}, #{}};
 % String message as a charlist, as sent by `logger:info("…")`.
 event(<<"string_charlist">>) ->
   {{string, "plain string"}, #{}};

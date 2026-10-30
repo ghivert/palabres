@@ -21,6 +21,8 @@
   plain `{string, Charlist}` messages are proper JSON strings.
 - Decorate plain `logger` messages like Palabres logs on Erlang: their default
   fields are scalars in JSON, like on Palabres logs, instead of arrays.
+- Use the timestamp of the event for `when` on Erlang, with millisecond
+  precision like JavaScript, instead of the formatting time in seconds.
 
 ### v1.0.4 - 2025-12-24
 
