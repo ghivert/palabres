@@ -5,6 +5,7 @@
 -include_lib("palabres/include/palabres@options_Options.hrl").
 
 -define(AUTO_AT_KEY, {palabres, auto_at}).
+-define(FORMATTING_KEY, {palabres, formatting}).
 
 % Configure Palabres logger, by updating the primary config, and setting things
 % up according to the Palabres configuration.
@@ -254,6 +255,19 @@ format_level(Level, #{color := Color}) ->
 % machine, or read by a human.
 format_msg(Report0, Meta, Options0) ->
   Options = Options0#{timestamp => format_time(Meta)},
+  % A lazy default field can itself log: the formatter then runs again, in
+  % the same process, while this log is being formatted. The nested log is
+  % formatted without default fields, otherwise the lazy field would be
+  % evaluated again, forever.
+  case erlang:put(?FORMATTING_KEY, true) of
+    true -> do_format_msg(Report0, Meta, Options#{default_fields => []});
+    undefined ->
+      try do_format_msg(Report0, Meta, Options)
+      after erlang:erase(?FORMATTING_KEY)
+      end
+  end.
+
+do_format_msg(Report0, Meta, Options) ->
   case Report0 of
     {string, Msg} ->
       format_string_msg(Msg, Options);

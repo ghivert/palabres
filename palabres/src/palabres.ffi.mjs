@@ -106,6 +106,7 @@ class Logger {
     this.json = options.json
     this.output = options.output
     this.defaultFields = options.defaultFields
+    this.formatting = false
     // A file output goes through a single stream, opened in append mode for
     // the whole life of the logger. The stream queues the lines and writes
     // them as fast as the file accepts them, and pending writes keep the
@@ -116,9 +117,18 @@ class Logger {
 
   log(lvl, fields, message, at) {
     if (levels.asInt(lvl) < this.level) return
-    const msg = this.#formatMessage(lvl, fields, message, at)
-    if (this.stream) this.stream.write(msg + '\n')
-    else console.log(msg)
+    // A lazy default field can itself log, which formats a new log while this
+    // one is being formatted. The nested log is formatted without default
+    // fields, otherwise the lazy field would be evaluated again, forever.
+    const nested = this.formatting
+    this.formatting = true
+    try {
+      const msg = this.#formatMessage(lvl, fields, message, at, nested)
+      if (this.stream) this.stream.write(msg + '\n')
+      else console.log(msg)
+    } finally {
+      this.formatting = nested
+    }
   }
 
   destroy() {
@@ -140,8 +150,8 @@ class Logger {
     return stream
   }
 
-  #formatMessage(lvl, fields, message, at) {
-    const f1 = $list.append(fields, this.defaultFields)
+  #formatMessage(lvl, fields, message, at, nested) {
+    const f1 = nested ? fields : $list.append(fields, this.defaultFields)
     const f2 = this.autoWhen ? $converter.prepend_when(f1, formatIso8601()) : f1
     const f3 = $converter.prepend_at(f2, at, this.#isColor, this.#isJson)
     if (this.#isJson) return this.#formatJSON(lvl, f3, message)

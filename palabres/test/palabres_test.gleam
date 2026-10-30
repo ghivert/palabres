@@ -482,3 +482,26 @@ pub fn should_write_to_file_without_flush_interval_test() {
   use content <- read_file_logs()
   assert content == "level=info Unflushed message\n"
 }
+
+/// A lazy default field logging on its own must not make the logger recurse
+/// forever: the nested log is written without default fields.
+pub fn should_not_recurse_when_a_lazy_field_logs_test() {
+  options.defaults()
+  |> options.color(False)
+  |> options.auto_at(False)
+  |> options.auto_when(False)
+  |> options.level(Debug)
+  |> options.output(to: {
+    options.file(test_utils.log_file)
+    |> options.flush(every: 10)
+  })
+  |> options.default_lazy_string("lazy", fn() {
+    palabres.log_debug("Nested message")
+    "lazy-value"
+  })
+  |> palabres.configure
+  palabres.log_info("Outer message")
+  use content <- read_file_logs()
+  assert content
+    == "level=debg Nested message\nlevel=info lazy=lazy-value Outer message\n"
+}
