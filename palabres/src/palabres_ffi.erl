@@ -252,10 +252,31 @@ format_msg(Report0, Options) ->
     {report, Report1} when is_list(Report1) ->
       Report2 = format_orddict(Report1),
       json_wrap(Report2, Json);
+    {Format, Args} when is_list(Args) ->
+      format_string_msg(format_io(Format, Args), Options);
     _ ->
       Report1 = gleam@string:inspect(Report0),
       json_wrap([$\s, Report1], Json)
   end.
+
+% Format `io:format/2` style messages, the most common form of Erlang logs,
+% like `logger:info("user ~p logged in", [Id])`. A bad format string or
+% mismatched arguments must never crash the logger: the format and its
+% arguments are then printed raw, on a single line, like `logger_formatter`
+% does.
+-spec format_io(io:format(), [term()]) -> binary().
+format_io(Format, Args) ->
+  try unicode:characters_to_binary(io_lib:format(Format, Args)) of
+    Msg when is_binary(Msg) -> Msg;
+    _ -> format_error(Format, Args)
+  catch
+    error:_ -> format_error(Format, Args)
+  end.
+
+-spec format_error(term(), term()) -> binary().
+format_error(Format, Args) ->
+  Msg = io_lib:format("FORMAT ERROR: ~0tp - ~0tp", [Format, Args]),
+  unicode:characters_to_binary(Msg).
 
 % Format standard string reports. Because of the nature of Palabres, it does
 % not override the standard logger, and as such, user can still send plain text

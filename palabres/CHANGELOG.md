@@ -12,6 +12,9 @@
   get the same output on both targets.
 - Sort `PALABRES_*` environment variables to keep default fields in a
   deterministic order.
+- Format `{Format, Args}` messages sent to `logger` on Erlang, like
+  `logger:info("user ~p", [Id])`, with `io_lib:format/2` instead of inspecting
+  them.
 
 ### v1.0.4 - 2025-12-24
 
