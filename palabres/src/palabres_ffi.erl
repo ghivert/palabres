@@ -114,8 +114,8 @@ handler_filter(Event, Extra) ->
 
 % Read if color is activated or not. In case color activation has been set by
 % hand by the user, the choice is immediately returned. Otherwise, the
-% environment variables `NO_COLOUR` and `NO_COLOR` will be read, and will take
-% effect if not defined. By default, color is activated.
+% environment variables `NO_COLOUR` and `NO_COLOR` will be read, and will
+% deactivate color when set. By default, color is activated.
 -spec read_color({some, boolean()} | none) -> boolean().
 read_color(Color) ->
   case Color of
@@ -126,14 +126,14 @@ read_color(Color) ->
       not NO_COLOR
   end.
 
-% Read a boolean variable from the environment. If the variable is undefined or
-% empty, returns `false`. Otherwise, returns its value.
+% Read a flag variable from the environment, following the `NO_COLOR`
+% convention (https://no-color.org): the flag is set when the variable is
+% defined with any non-empty value, whatever it is.
 -spec read_variable(Name :: os:env_var_name()) -> boolean().
 read_variable(Name) ->
   case os:getenv(Name) of
     false -> false;
     "" -> false;
-    "false" -> false;
     _ -> true
   end.
 
@@ -212,8 +212,8 @@ format(#{level := Level, msg := Msg, meta := Meta}, Options) ->
 
 % Format the level indicator for query string, with an appropriate color. In
 % case color is deactivated (because it has been deactivated by user, or because
-% `NO_COLOUR` or `NO_COLOR` variable has been set to `true`), the level is
-% returned with any color.
+% `NO_COLOUR` or `NO_COLOR` variable has been set), the level is returned
+% without any color.
 format_level(Level, #{color := Color}) ->
   case Level of
     emergency when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;31memrg\x1b[0m";

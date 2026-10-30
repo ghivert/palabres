@@ -153,9 +153,11 @@ class Logger {
     return !isJson && isColored
   }
 
+  // Follow the NO_COLOR convention (https://no-color.org): colour is
+  // deactivated when the variable is defined with any non-empty value.
   #readColor() {
-    const noColor = process.env.NO_COLOUR || process.env.NO_COLOR
-    return noColor === undefined
+    const flags = [process.env.NO_COLOUR, process.env.NO_COLOR]
+    return !flags.some(flag => flag !== undefined && flag !== '')
   }
 
   async #flush() {

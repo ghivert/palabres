@@ -27,6 +27,8 @@
   {Fields, Message, At}}`, so that third-party handlers can receive them.
 - Install a single primary `logger` filter on Erlang, under the id
   `palabres_domain`, instead of two conflicting `domain` filters.
+- Follow the `NO_COLOR` convention on both targets: any non-empty value disables
+  colour, including `false`; an empty value keeps it.
 
 ### v1.0.4 - 2025-12-24
 
