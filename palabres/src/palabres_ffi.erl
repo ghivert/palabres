@@ -32,16 +32,16 @@ store_auto_at(Options) ->
   end.
 
 % Update the primary config of logger, setting the log level, and filtering
-% some domains by default.
+% some domains by default: progress and supervisor reports of OTP, which live
+% in the `[otp, sasl]` domain. The filter gets a distinct id, to avoid
+% clobbering a `domain` filter installed by the user.
 -spec update_primary_config(#options{}) -> nil.
 update_primary_config(Options) ->
+  Filter = {fun logger_filters:domain/2, {stop, sub, [otp, sasl]}},
   logger:update_primary_config(#{
     level => Options#options.level,
     filter_default => log,
-    filters =>
-      [{domain, {fun logger_filters:domain/2, {stop, sub, [otp, sasl]}}},
-       {domain, {fun logger_filters:domain/2, {stop, sub, [supervisor_report]}}}],
-    metadata => palabres@internals@field:default_fields_to_dynamic(Options#options.default_fields)}),
+    filters => [{palabres_domain, Filter}]}),
   nil.
 
 % Add the `palabres_logger` to the logger, living besides the `default` logger.

@@ -25,6 +25,8 @@
   precision like JavaScript, instead of the formatting time in seconds.
 - Send Palabres logs as a valid `logger` report on Erlang, `#{palabres =>
   {Fields, Message, At}}`, so that third-party handlers can receive them.
+- Install a single primary `logger` filter on Erlang, under the id
+  `palabres_domain`, instead of two conflicting `domain` filters.
 
 ### v1.0.4 - 2025-12-24
 
