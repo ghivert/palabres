@@ -38,6 +38,7 @@
   change in the JavaScript snapshots.
 - Fix an infinite recursion when a lazy default field itself logs, on both
   targets: the nested log is written without default fields.
+- Share the level formatting between the Erlang and JavaScript loggers.
 
 ### v1.0.4 - 2025-12-24
 

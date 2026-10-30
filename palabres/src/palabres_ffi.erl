@@ -227,26 +227,9 @@ format(#{level := Level, msg := Msg, meta := Meta}, Options) ->
 % Format the level indicator for query string, with an appropriate color. In
 % case color is deactivated (because it has been deactivated by user, or because
 % `NO_COLOUR` or `NO_COLOR` variable has been set), the level is returned
-% without any color.
+% without any color. `logger` levels are the atoms of the Gleam `Level` type.
 format_level(Level, #{color := Color}) ->
-  case Level of
-    emergency when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;31memrg\x1b[0m";
-    alert     when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;31malrt\x1b[0m";
-    critical  when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;31mcrit\x1b[0m";
-    error     when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;31meror\x1b[0m";
-    warning   when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;33mwarn\x1b[0m";
-    notice    when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;32mntce\x1b[0m";
-    info      when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;34minfo\x1b[0m";
-    debug     when Color -> "\x1b[32mlevel\x1b[31m=\x1b[1;36mdebg\x1b[0m";
-    emergency -> "level=emrg";
-    alert     -> "level=alrt";
-    critical  -> "level=crit";
-    error     -> "level=eror";
-    warning   -> "level=warn";
-    notice    -> "level=ntce";
-    info      -> "level=info";
-    debug     -> "level=debg"
-  end.
+  palabres@internals@converter:format_level(Level, Color).
 
 % Default log formatter. Format logs in JSON or query string, depending on the
 % mode setup at start. Any Palabres log will go through a specific formatting,

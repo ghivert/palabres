@@ -1,7 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as $converter from './palabres/internals/converter.mjs'
-import * as levels from './palabres/level.ffi.mjs'
 import { Location } from './palabres/internals/location.mjs'
 import * as $dict from '../gleam_stdlib/gleam/dict.mjs'
 import * as $list from '../gleam_stdlib/gleam/list.mjs'
@@ -45,7 +44,7 @@ const PALABRES_FRAMES = 3
 // avoids formatting and parsing the stack string, and is unaffected by source
 // maps. Supported on Node, Deno and Bun. Anything else gets no location.
 export function locate(level) {
-  if (!logger?.autoAt || levels.asInt(level) < logger.level) return new None()
+  if (!logger?.autoAt || $converter.level_to_int(level) < logger.level) return new None()
   const { prepareStackTrace, stackTraceLimit } = Error
   Error.stackTraceLimit = PALABRES_FRAMES + 1
   Error.prepareStackTrace = (_, callSites) => callSites
@@ -89,7 +88,7 @@ export function log(lvl, fields, message, at) {
 // Whether a log at that level would be printed. Without a configured logger,
 // nothing is printed, so nothing deferred is worth computing.
 export function isAllowed(lvl) {
-  return logger !== null && levels.asInt(lvl) >= logger.level
+  return logger !== null && $converter.level_to_int(lvl) >= logger.level
 }
 
 export function destroy() {
@@ -101,7 +100,7 @@ class Logger {
   constructor(options) {
     this.autoAt = options.autoAt
     this.autoWhen = options.autoWhen
-    this.level = levels.asInt(options.level)
+    this.level = $converter.level_to_int(options.level)
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
@@ -116,7 +115,7 @@ class Logger {
   }
 
   log(lvl, fields, message, at) {
-    if (levels.asInt(lvl) < this.level) return
+    if ($converter.level_to_int(lvl) < this.level) return
     // A lazy default field can itself log, which formats a new log while this
     // one is being formatted. The nested log is formatted without default
     // fields, otherwise the lazy field would be evaluated again, forever.
@@ -158,7 +157,8 @@ class Logger {
     const msg = $converter.format_message(message, this.#isColor)
     const f4 = $converter.to_spaced_query_string(f3, this.#isColor)
     // Both the fields and the message can be empty: skip them.
-    return [levels.format(lvl, this.color), f4, msg].filter(Boolean).join(' ')
+    const level = $converter.format_level(lvl, this.color)
+    return [level, f4, msg].filter(Boolean).join(' ')
   }
 
   #formatJSON(lvl, fields, message) {
@@ -169,7 +169,8 @@ class Logger {
       .map(([key, value]) => [key, value?.toArray?.() ?? value ?? null])
       // Keys are sorted to get a deterministic output, consistent with Erlang.
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
+    const level = $converter.level_to_string(lvl)
+    const data_ = { ...Object.fromEntries(data), level }
     return JSON.stringify(data_)
   }
 
