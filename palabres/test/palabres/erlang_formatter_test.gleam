@@ -31,7 +31,43 @@ pub fn should_format_io_format_messages_test() {
 }
 
 @target(erlang)
+pub fn should_format_charlist_messages_test() {
+  assert text("string_charlist") == "level=info plain string\n"
+  assert json("string_charlist")
+    == "{\"__message\":\"plain string\",\"level\":\"info\"}"
+}
+
+@target(erlang)
 pub fn should_not_crash_on_bad_format_test() {
   let expected = "level=info FORMAT ERROR: \"user ~p logged in ~p\" - [-42]\n"
   assert text("bad_format_args") == expected
+}
+
+@target(erlang)
+pub fn should_format_map_reports_as_fields_test() {
+  assert text("map_report") == "level=info action=login user=42\n"
+  assert json("map_report")
+    == "{\"action\":\"login\",\"level\":\"info\",\"user\":42}"
+}
+
+@target(erlang)
+pub fn should_format_list_reports_as_fields_test() {
+  assert text("list_report") == "level=info user=42 action=login\n"
+  assert json("list_report")
+    == "{\"action\":\"login\",\"level\":\"info\",\"user\":42}"
+}
+
+@target(erlang)
+pub fn should_render_charlists_as_strings_test() {
+  assert text("charlist_report") == "level=info name=hello ids=[1,2] empty=[]\n"
+  assert json("charlist_report")
+    == "{\"empty\":\"[]\",\"ids\":\"[1,2]\",\"level\":\"info\",\"name\":\"hello\"}"
+}
+
+@target(erlang)
+pub fn should_render_reports_with_report_cb_test() {
+  assert text("report_cb_1") == "level=info user 42 crashed\n"
+  assert text("report_cb_2") == "level=info user 42 crashed\n"
+  assert json("report_cb_2")
+    == "{\"__message\":\"user 42 crashed\",\"level\":\"info\"}"
 }

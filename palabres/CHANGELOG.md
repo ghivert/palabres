@@ -15,6 +15,10 @@
 - Format `{Format, Args}` messages sent to `logger` on Erlang, like
   `logger:info("user ~p", [Id])`, with `io_lib:format/2` instead of inspecting
   them.
+- Display reports sent to `logger` on Erlang as fields, like `user=42`, typed in
+  JSON instead of serialised as arrays of integers, with charlists as strings.
+  OTP crash reports are rendered through their `report_cb`, as OTP does, and
+  plain `{string, Charlist}` messages are proper JSON strings.
 
 ### v1.0.4 - 2025-12-24
 

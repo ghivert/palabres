@@ -4,7 +4,8 @@
 
 import gleam/bool
 import gleam/dict
-import gleam/dynamic
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
@@ -100,6 +101,28 @@ fn format_location(location: Location, is_color: Bool, is_json: Bool) -> Field {
 }
 
 pub fn format_message(message: String, is_color: Bool) -> String {
-  use <- bool.guard(when: !is_color, return: message)
+  use <- bool.guard(when: !is_color || message == "", return: message)
   "\u{1b}[1m" <> message <> "\u{1b}[0m"
+}
+
+/// Convert a report coming from the outside world, like an Erlang `logger`
+/// report, to fields. Values are typed when they are primitives, to be
+/// rendered as proper strings and numbers in JSON, and are inspected
+/// otherwise.
+pub fn from_report(report: List(#(String, Dynamic))) -> Fields {
+  use #(key, value) <- list.map(report)
+  #(key, [report_field(value)])
+}
+
+fn report_field(value: Dynamic) -> Field {
+  let decoder =
+    decode.one_of(decode.map(decode.int, field.int), or: [
+      decode.map(decode.float, field.float),
+      decode.map(decode.bool, field.bool),
+      decode.map(decode.string, field.string),
+    ])
+  case decode.run(value, decoder) {
+    Ok(field) -> field
+    Error(_) -> field.string(string.inspect(value))
+  }
 }

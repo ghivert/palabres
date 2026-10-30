@@ -45,9 +45,34 @@ format_event(Kind, Json, AutoWhen, Defaults) ->
     true -> iolist_to_binary(json:encode(json:decode(string:trim(Formatted))))
   end.
 
+% String message as a charlist, as sent by `logger:info("…")`.
+event(<<"string_charlist">>) ->
+  {{string, "plain string"}, #{}};
 % `io:format/2` style message, as sent by `logger:info("…", [...])`.
 event(<<"format_args">>) ->
   {{"user ~p logged in", [42]}, #{}};
 % Format string with a missing argument: must not crash the logger.
 event(<<"bad_format_args">>) ->
-  {{"user ~p logged in ~p", [-42]}, #{}}.
+  {{"user ~p logged in ~p", [-42]}, #{}};
+% Report as a map, as sent by `logger:info(#{...})`.
+event(<<"map_report">>) ->
+  {{report, #{user => 42, action => <<"login">>}}, #{}};
+% Report holding charlists, the strings of Erlang code, as a key and as
+% values, next to a list that is not a string and to an empty list.
+event(<<"charlist_report">>) ->
+  {{report, [{"name", "hello"}, {ids, [1, 2]}, {empty, []}]}, #{}};
+% Report as a key-value list, as sent by `logger:info([{...}])`. The handler
+% injects the default `report_cb` on every report without one before calling
+% the formatter: it must not take over the structured rendering.
+event(<<"list_report">>) ->
+  {{report, [{user, 42}, {action, <<"login">>}]},
+   #{report_cb => fun logger:format_otp_report/1}};
+% Report with a `report_cb/1`, returning a format and its arguments, as OTP
+% crash reports do.
+event(<<"report_cb_1">>) ->
+  Cb = fun(#{user := User}) -> {"user ~p crashed", [User]} end,
+  {{report, #{user => 42}}, #{report_cb => Cb}};
+% Report with a `report_cb/2`, returning chardata.
+event(<<"report_cb_2">>) ->
+  Cb = fun(#{user := User}, _Options) -> io_lib:format("user ~p crashed", [User]) end,
+  {{report, #{user => 42}}, #{report_cb => Cb}}.

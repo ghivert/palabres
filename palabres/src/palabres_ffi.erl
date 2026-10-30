@@ -194,15 +194,15 @@ function_name(Function) ->
 
 % Default entrypoint for the logger module. `palabres_ffi` acts as a logger
 % module, and defines a standard format entrypoint.
-format(#{level := Level, msg := Msg, meta := _Meta}, Options) ->
+format(#{level := Level, msg := Msg, meta := Meta}, Options) ->
   case maps:get(json, Options) of
     false ->
       Level1 = format_level(Level, Options),
-      Msg1 = format_msg(Msg, Options),
+      Msg1 = format_msg(Msg, Meta, Options),
       [Level1, Msg1, $\n];
     true ->
       JsonOptions = maps:put(color, false, Options),
-      JsonData0 = format_msg(Msg, JsonOptions),
+      JsonData0 = format_msg(Msg, Meta, JsonOptions),
       JsonData1 = maps:put(<<"level">>, Level, JsonData0),
       JsonIo = json:encode(JsonData1),
       JsonString = iolist_to_binary(JsonIo),
@@ -238,26 +238,123 @@ format_level(Level, #{color := Color}) ->
 % while every other log will go through a standard formatter. In both case,
 % Palabres tries to format the log in a nicely way to be easily parsed by a
 % machine, or read by a human.
-format_msg(Report0, Options) ->
+format_msg(Report0, Meta, Options) ->
   #{json := Json} = Options,
   case Report0 of
     {string, Msg} ->
       format_string_msg(Msg, Options);
     {report, [{palabres, Fields, Msg, At}]} ->
       format_palabres_report(Fields, Msg, At, Options);
-    {report, Report1} when is_map(Report1) ->
-      Report2 = maps:to_list(Report1),
-      Report3 = format_orddict(Report2),
-      json_wrap(Report3, Json);
-    {report, Report1} when is_list(Report1) ->
-      Report2 = format_orddict(Report1),
-      json_wrap(Report2, Json);
+    {report, Report1} when is_map(Report1); is_list(Report1) ->
+      format_report(Report1, Meta, Options);
     {Format, Args} when is_list(Args) ->
       format_string_msg(format_io(Format, Args), Options);
     _ ->
       Report1 = gleam@string:inspect(Report0),
       json_wrap([$\s, Report1], Json)
   end.
+
+% Format reports not emitted by Palabres: maps or key-value lists sent to
+% `logger` by Erlang code, or by OTP itself. When the event carries a
+% `report_cb`, OTP's convention to render a report as text, it is used to get
+% a readable message, as for crash reports. Otherwise, the report is displayed
+% as structured fields, exactly like a Palabres log without message. A
+% malformed report never crashes the logger: it is then printed raw.
+format_report(Report, Meta, Options) ->
+  case report_callback(Report, Meta) of
+    {ok, Msg} -> format_string_msg(Msg, Options);
+    error ->
+      try report_fields(Report) of
+        Fields -> format_palabres_report(Fields, <<>>, none, Options)
+      catch
+        error:_ -> format_string_msg(inspect(Report), Options)
+      end
+  end.
+
+% Render a report with its `report_cb`, when the event has one. `report_cb/1`
+% returns a format and its arguments, `report_cb/2` returns chardata, and
+% takes the formatting options of `logger_formatter`. A failing or misbehaving
+% callback is ignored, and the report falls back to its structured rendering.
+% The handler injects `logger:format_otp_report/1` when the event has no
+% callback: it dumps the report as `Key: Value` lines, which is exactly what
+% the structured rendering does better, so it is ignored as well.
+-spec report_callback(logger:report(), logger:metadata()) -> {ok, binary()} | error.
+report_callback(Report, #{report_cb := Callback}) when is_function(Callback, 1) ->
+  case Callback =:= fun logger:format_otp_report/1 of
+    true -> error;
+    false ->
+      try Callback(Report) of
+        {Format, Args} when is_list(Args) -> {ok, format_io(Format, Args)};
+        _ -> error
+      catch
+        _:_ -> error
+      end
+  end;
+report_callback(Report, #{report_cb := Callback}) when is_function(Callback, 2) ->
+  FormatOptions = #{depth => unlimited, chars_limit => unlimited, single_line => true},
+  try unicode:characters_to_binary(Callback(Report, FormatOptions)) of
+    Msg when is_binary(Msg) -> {ok, Msg};
+    _ -> error
+  catch
+    _:_ -> error
+  end;
+report_callback(_Report, _Meta) ->
+  error.
+
+% Turn a report in Palabres fields. Keys and values are typed in Gleam when
+% they are primitives, so they end up as proper strings and numbers in JSON.
+% Erlang-only terms are rendered here: atoms by their name, printable
+% charlists as the string they spell, anything else inspected on a single
+% line, in Erlang syntax. Maps have no reliable key order, so their fields
+% are sorted, while lists keep the order of their author.
+-spec report_fields(logger:report()) -> palabres@internals@field:fields().
+report_fields(Report) when is_map(Report) ->
+  Pairs = report_pairs(maps:to_list(Report)),
+  palabres@internals@converter:from_report(lists:keysort(1, Pairs));
+report_fields(Report) when is_list(Report) ->
+  palabres@internals@converter:from_report(report_pairs(Report)).
+
+-spec report_pairs([{term(), term()}]) -> [{binary(), term()}].
+report_pairs(Report) ->
+  [{report_key(Key), report_value(Value)} || {Key, Value} <- Report].
+
+-spec report_key(term()) -> binary().
+report_key(Key) when is_atom(Key) -> atom_to_binary(Key);
+report_key(Key) when is_binary(Key) -> Key;
+report_key(Key) ->
+  case charlist_to_binary(Key) of
+    {ok, Key1} -> Key1;
+    error -> inspect(Key)
+  end.
+
+-spec report_value(term()) -> term().
+report_value(Value) when is_boolean(Value) -> Value;
+report_value(Value) when is_atom(Value) -> atom_to_binary(Value);
+report_value(Value) when is_binary(Value); is_number(Value) -> Value;
+report_value(Value) ->
+  case charlist_to_binary(Value) of
+    {ok, Value1} -> Value1;
+    error -> inspect(Value)
+  end.
+
+% Charlists are the strings of Erlang code: `"hello"` is `[104, 101, …]`.
+% A non-empty list of printable characters is read as the string it spells,
+% as `~tp` does. The empty list stays `[]`, as it is more often a list.
+-spec charlist_to_binary(term()) -> {ok, binary()} | error.
+charlist_to_binary([]) ->
+  error;
+charlist_to_binary(List) when is_list(List) ->
+  case io_lib:printable_unicode_list(List) of
+    true -> {ok, unicode:characters_to_binary(List)};
+    false -> error
+  end;
+charlist_to_binary(_) ->
+  error.
+
+% Inspect an Erlang term on a single line, in Erlang syntax.
+-spec inspect(term()) -> binary().
+inspect(Term) ->
+  unicode:characters_to_binary(io_lib:format("~0tp", [Term])).
 
 % Format `io:format/2` style messages, the most common form of Erlang logs,
 % like `logger:info("user ~p logged in", [Id])`. A bad format string or
@@ -275,8 +372,7 @@ format_io(Format, Args) ->
 
 -spec format_error(term(), term()) -> binary().
 format_error(Format, Args) ->
-  Msg = io_lib:format("FORMAT ERROR: ~0tp - ~0tp", [Format, Args]),
-  unicode:characters_to_binary(Msg).
+  <<"FORMAT ERROR: ", (inspect(Format))/binary, " - ", (inspect(Args))/binary>>.
 
 % Format standard string reports. Because of the nature of Palabres, it does
 % not override the standard logger, and as such, user can still send plain text
@@ -288,7 +384,9 @@ format_string_msg(Msg, Options) ->
   case Json of
     true ->
       DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
-      JsonData0 = #{'__message' => Msg},
+      % `Msg` can be any `unicode:chardata()`, like a charlist, which `json`
+      % would encode as an array of integers.
+      JsonData0 = #{'__message' => unicode:characters_to_binary(Msg)},
       JsonData1 =
         case AutoWhen of
           true -> maps:put(<<"when">>, When, JsonData0);
@@ -350,22 +448,3 @@ json_wrap(Content, Json) ->
     {true, _} -> #{message => Content}
   end.
 
-% Used only for non-Palabres log formatting. Because external logs can arrive,
-% a standard formatter runs on plain logs to turn them in a familiar Palabres
-% format.
--spec format_orddict([{term(), term()}]) -> binary().
-format_orddict(Pairs) ->
-  case Pairs of
-    [] ->
-      [];
-    [{Key, Value} | Rest] when is_atom(Key) ->
-      Key1 = erlang:atom_to_binary(Key),
-      Value1 = gleam@string:inspect(Value),
-      [$\s, Key1, $=, Value1 | format_orddict(Rest)];
-    [{Key, Value} | Rest] ->
-      Key1 = gleam@string:inspect(Key),
-      Value1 = gleam@string:inspect(Value),
-      [$\s, Key1, $=, Value1 | format_orddict(Rest)];
-    Rest ->
-      gleam@string:inspect(Rest)
-  end.
