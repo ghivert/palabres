@@ -240,7 +240,6 @@ format_level(Level, #{color := Color}) ->
 % Palabres tries to format the log in a nicely way to be easily parsed by a
 % machine, or read by a human.
 format_msg(Report0, Meta, Options0) ->
-  #{json := Json} = Options0,
   Options = Options0#{timestamp => format_time(Meta)},
   case Report0 of
     {string, Msg} ->
@@ -251,9 +250,10 @@ format_msg(Report0, Meta, Options0) ->
       format_report(Report1, Meta, Options);
     {Format, Args} when is_list(Args) ->
       format_string_msg(format_io(Format, Args), Options);
+    % `logger` only emits the three forms above: anything else is printed
+    % raw, rather than crashing the formatter.
     _ ->
-      Report1 = gleam@string:inspect(Report0),
-      json_wrap([$\s, Report1], Json)
+      format_string_msg(inspect(Report0), Options)
   end.
 
 % Format reports not emitted by Palabres: maps or key-value lists sent to
@@ -433,16 +433,4 @@ prepend_when(Fields, When, true) ->
   palabres@internals@converter:prepend_when(Fields, When);
 prepend_when(Fields, _When, false) ->
   Fields.
-
-% Depending if JSON mode is activated or not:
-% - Wrap a `string` (UTF-8, `binary()`) in a `map()` to use it as foundation.
-% - Returns the string as-is if JSON mode is deactivated.
--spec json_wrap(binary(), true) -> map();
-               (binary(), false) -> binary().
-json_wrap(Content, Json) ->
-  case {Json, Content} of
-    {false, _} -> Content;
-    {true, [$\s, Content1]} -> #{message => Content1};
-    {true, _} -> #{message => Content}
-  end.
 
