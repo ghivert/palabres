@@ -38,11 +38,17 @@
 //// #### Default values
 ////
 //// Palabres imposes 4 standard data in every log: the level of the log, its
-//// timestamp, an ID in UUID format, and an arbitrary message string. You don't
-//// have anything to do to add timestamp, id and level, they will automatically
-//// be added to every log you create. They're all here to help you in future
-//// log processing sessions. In the worst case, they can be safely ignored. In
-//// the best case, they help you figure out what's happening, when an where.
+//// timestamp (`when`), its location in your code base (`at`), and an
+//// arbitrary message string. You don't have anything to do to add level,
+//// timestamp and location, they will automatically be added to every log you
+//// create. They're all here to help you in future log processing sessions. In
+//// the worst case, they can be safely ignored. In the best case, they help you
+//// figure out what's happening, when and where.
+////
+//// Location is detected from the call stack, and points to the module and the
+//// function where the log has been created, like `at=my_app/router.handle`.
+//// Take a look at [`at`](#at) for details and limitations, and at
+//// [`options.auto_at`](./palabres/options.html#auto_at) to deactivate it.
 ////
 //// Arbitrary text messages are parts of log, and instead of putting them in a
 //// specific field, they're simply dumped as is in the string format, or under
@@ -104,6 +110,7 @@ import gleam/list
 import gleam/option.{type Option, Some}
 import gleam/string
 import palabres/internals/field.{type Fields}
+import palabres/internals/location.{type Location, Location}
 import palabres/level
 import palabres/options.{type Options}
 
@@ -112,8 +119,14 @@ import palabres/options.{type Options}
 /// get Palabres logger running. Each logger call will then go through Palabres
 /// on BEAM. On JavaScript, calling `palabres` functions are still required.
 pub fn configure(options: Options) -> Nil {
+  // Environment variables are sorted to keep the fields order deterministic,
+  // as `envoy.all()` iteration order depends on the runtime.
+  let environment =
+    list.sort(dict.to_list(envoy.all()), by: fn(a, b) {
+      string.compare(a.0, b.0)
+    })
   do_configure({
-    use options, key, value <- dict.fold(envoy.all(), options)
+    use options, #(key, value) <- list.fold(environment, options)
     let key = string.lowercase(key)
     let is_palabres_key = string.starts_with(key, "palabres_")
     use <- bool.guard(when: !is_palabres_key, return: options)
@@ -156,7 +169,7 @@ pub opaque type Log {
     level: level.Level,
     fields: field.Fields,
     message: String,
-    at: Option(#(String, String)),
+    at: Option(Location),
   )
 }
 
@@ -352,10 +365,11 @@ pub fn log_debug(message: String) -> Nil {
   log(init(level.Debug, message))
 }
 
-/// Debug information, used to easily pinpoint a location in your code. `at`
-/// should point to a module and a function, and will display in your logs
-/// a data looking like `at=module.function` with proper colored output if
-/// activated.
+/// Location of the log in your code base, displayed as `at=module.function`,
+/// with proper colored output if activated. The location is captured
+/// automatically when the log is created, so you should rarely need `at`:
+/// use it to override the detected location, or to point to a meaningful
+/// place when the log is created in a helper.
 ///
 /// ```gleam
 /// pub fn log() {
@@ -363,11 +377,29 @@ pub fn log_debug(message: String) -> Nil {
 ///   |> palabres.at("my_logger", "log")
 ///   |> palabres.log
 ///   // Turns in:
-///   //   level=info when=2024-12-15T15:59:17Z id=3a5c0fc2-5f74-4796-84df-cbfe4000eef6 at=my_logger.log Example message
+///   //   level=info at=my_logger.log when=2024-12-15T15:59:17Z Example message
 /// }
 /// ```
+///
+/// #### Automatic location
+///
+/// Location is detected by inspecting the call stack when
+/// [`emergency`](#emergency), [`info`](#info), [`log_debug`](#log_debug) and
+/// others are called. Modules are displayed with their full path, like
+/// `my_app/web/router`. Some limitations apply:
+/// - On Erlang, the location is where the code actually runs. A `log_*`
+///   helper or a level constructor used as the last expression of a function
+///   is a tail call, and a small private function called once is inlined by
+///   the compiler: in both cases, the location is the caller of that function.
+/// - On JavaScript, anonymous functions have no name, and the log is only
+///   tagged with its module. Only Node, Deno and Bun are supported, in a
+///   non-bundled Gleam build. In a bundled application, the module is the
+///   name of the bundle.
+/// - Location is not captured when the log is filtered out by the configured
+///   level, nor when [`options.auto_at`](./palabres/options.html#auto_at) is
+///   deactivated.
 pub fn at(log: Log, module module: String, function function: String) -> Log {
-  Log(..log, at: Some(#(module, function)))
+  Log(..log, at: Some(Location(module:, function: Some(function))))
 }
 
 /// Add a string field to your structured data.
@@ -492,10 +524,14 @@ fn do_log(
   level: level.Level,
   fields: Fields,
   message: String,
-  at: Option(#(String, String)),
+  at: Option(Location),
 ) -> Nil
 
+/// Location is captured here, and not in `log`, on purpose: `log` is often
+/// the last expression of a function, i.e. a tail call on Erlang, where the
+/// calling function has already left the stack. The level constructors are
+/// never in tail position, because their result is used right after.
 fn init(level: level.Level, message: String) {
-  let fields = [#("at", []), #("when", [])]
-  Log(level:, fields:, message:, at: option.None)
+  let at = location.capture(level)
+  Log(level:, fields: [], message:, at:)
 }

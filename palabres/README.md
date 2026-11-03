@@ -7,15 +7,15 @@
 > 1. Long & hard discussion to get a precise result.
 > 2. An interminable and often idle discussion.
 
-Palabres is an opinionated logger, built in Gleam for Gleamlins, targetting both
-Erlang and JavaScript. Palabres tries to be compatible with the most runtimes
-possible, so you can expect it to work on BEAM & any flavour of
-JavaScript — with 100% compatibility while the runtime respect Node.js imports.
+Palabres is an opinionated logger, built in Gleam for Gleamlins, targeting both
+Erlang and JavaScript. Palabres tries to be compatible with as many runtimes as
+possible, so you can expect it to work on BEAM & any JavaScript runtime
+supporting Node.js imports, like Node, Deno or Bun.
 
 Palabres tries to stay simple yet powerful. By using structured data, text
-messages and potential metadata, Palabres tries to provides a nice and pleasant
+messages and potential metadata, Palabres tries to provide a nice and pleasant
 experience out-of-the-box with few to no configuration and helps to build &
-monitor complex system.
+monitor complex systems.
 
 > ⚠️ **About Erlang/OTP compatibility**
 >
@@ -28,7 +28,7 @@ monitor complex system.
 
 Generally, when you're starting out a project, you rely on the default logger,
 with its default abilities. However, in the long run, you probably want to add
-context, to add advance monitoring, to follow user flows, and much more, in your
+context, to add advanced monitoring, to follow user flows, and much more, in your
 logs. Outputting plain text in such case can make the task hard. That's where
 Palabres comes into play, it helps you to go from
 
@@ -41,18 +41,19 @@ to
 
 ```json
 {
-  "level": "info",
+  "__message": "Server started, listening",
+  "at": "my_app.main",
   "host": "0.0.0.0",
-  "id": "3aa3660c-8f1f-4bbc-a530-346e140b0015",
-  "message": "Server started, listening",
-  "port": "3000",
-  "scheme": "http","when":"2024-12-16T17:43:40Z"
+  "level": "info",
+  "port": 3000,
+  "scheme": "http",
+  "when": "2024-12-16T17:43:40Z"
 }
 {
+  "at": "palabres_wisp.log_request",
   "level": "info",
-  "id": "c848d8f9-6c64-4d25-90dd-3ee3b14ec7a9",
   "method": "GET",
-  "status": "404",
+  "status": 404,
   "when": "2024-12-16T17:43:59Z",
   "where": "/"
 }
@@ -78,6 +79,7 @@ pub fn configure_logger() {
   options.defaults()
   |> options.color(True)
   |> options.json(False)
+  |> options.level(level.Info)
   |> options.output(to: options.stdout())
   |> palabres.configure
 }
@@ -90,32 +92,42 @@ pub fn log_message() {
 }
 ```
 
-And you're good to go! Find the entire explanations on
+And you're good to go! Every log is automatically tagged with its level, its
+timestamp, and its location in your code base, as `at=module.function`, so you
+can find where a log comes from without adding anything:
+
+```
+level=debg at=my_app.log_message when=2024-12-16T17:43:40Z my_field=content my_other_field=12 My debug message
+```
+
+Location and timestamp can be deactivated with `options.auto_at(False)` and
+`options.auto_when(False)`.
+
+Find the entire explanations on
 [Hexdocs](https://hexdocs.pm/palabres/palabres.html).
 
 ## Integrations
 
 Palabres provides out-of-the-box integration with `wisp`, the main webserver on
 Gleam! To get it, you can take a look at
-[`palabres_wisp`](https://github.com/ghivert/palabres_wisp) or follow the next
-steps.
+[`palabres_wisp`](https://hexdocs.pm/palabres_wisp) or follow the next steps.
 
 ### Using `palabres_wisp`
 
 First, install the dependency:
 
 ```sh
-gleam add palabres_wisp`
+gleam add palabres_wisp
 ```
 
-After you configured the logger as indicated abover, simply use the provided
+After you configured the logger as indicated above, simply use the provided
 middleware!
 
 ```gleam
 import palabres_wisp
 import wisp
 
-pub fn handle_request(request: Request) {
+pub fn handle_request(request: wisp.Request) {
   use <- palabres_wisp.log_request(request)
   wisp.ok()
 }

@@ -1,0 +1,8 @@
+---
+version: 1.5.5
+title: js_should locate logs in JSON
+---
+{"__message":"Located message","at":"palabres_test.located_messages","level":"info","test_field1":"test_value1"}
+{"__message":"Located from anonymous function","at":"palabres_test","level":"notice"}
+{"__message":"Located one-liner","at":"palabres_test.located_messages","level":"warning"}
+{"__message":"Explicit location","at":"my_module.my_function","level":"info"}

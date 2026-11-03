@@ -1,7 +1,9 @@
 import * as $converter from './palabres/internals/converter.mjs'
-import * as $field from './palabres/internals/field.mjs'
 import * as levels from './palabres/level.ffi.mjs'
+import { Location } from './palabres/internals/location.mjs'
+import * as $dict from '../gleam_stdlib/gleam/dict.mjs'
 import * as $list from '../gleam_stdlib/gleam/list.mjs'
+import { Some, None } from '../gleam_stdlib/gleam/option.mjs'
 
 let logger = null
 
@@ -9,18 +11,70 @@ export function formatIso8601() {
   return new Date().toISOString()
 }
 
-export function uuid() {
-  return crypto.randomUUID()
-}
-
 export function configure(options) {
   logger = new Logger({
+    autoAt: options.auto_at,
+    autoWhen: options.auto_when,
     color: options.color,
     json: options.json,
     level: options.level,
     output: options.output,
     defaultFields: options.default_fields,
   })
+}
+
+// Files holding the Palabres frames above the user function: this FFI, and
+// the compiled `palabres` module. In a Gleam build they identify Palabres
+// frames whatever their number. Counting frames would not do: JavaScriptCore
+// (Bun) eliminates tail calls, so `info` calling `init` leaves no frame.
+const PALABRES_FILE = /\/palabres\/palabres(\.ffi)?\.mjs$/
+
+// In a bundle, every frame shares the bundle's file name, and the Palabres
+// frames can only be counted: `locate`, `init`, and the level constructor
+// (`info`, `debug`, `log_info`…) on V8. Best effort only.
+const PALABRES_FRAMES = 3
+
+// Locate the function creating the log, only when the log is going to be
+// printed, to avoid paying for a stack inspection otherwise. The stack is
+// read as structured V8 call sites through `Error.prepareStackTrace`, which
+// avoids formatting and parsing the stack string, and is unaffected by source
+// maps. Supported on Node, Deno and Bun. Anything else gets no location.
+export function locate(level) {
+  if (!logger?.autoAt || levels.asInt(level) < logger.level) return new None()
+  const { prepareStackTrace, stackTraceLimit } = Error
+  Error.stackTraceLimit = PALABRES_FRAMES + 1
+  Error.prepareStackTrace = (_, callSites) => callSites
+  const callSites = new Error().stack
+  Error.prepareStackTrace = prepareStackTrace
+  Error.stackTraceLimit = stackTraceLimit
+  if (!Array.isArray(callSites)) return new None()
+  const site = callSites[userFrame(callSites)]
+  if (typeof site?.getFileName !== 'function') return new None()
+  const module = moduleName(site.getFileName())
+  if (module === null) return new None()
+  const fn = site.getFunctionName()
+  return new Some(new Location(module, fn ? new Some(fn) : new None()))
+}
+
+// Index of the first frame outside Palabres. The first frame is `locate`
+// itself: when its file is not recognised, the application is bundled, and
+// frames are counted instead.
+function userFrame(callSites) {
+  const isPalabres = site => PALABRES_FILE.test(site?.getFileName?.() ?? '')
+  if (!isPalabres(callSites[0])) return PALABRES_FRAMES
+  const index = callSites.findIndex(site => !isPalabres(site))
+  return index === -1 ? callSites.length : index
+}
+
+// Gleam compiles `my_app/web/router` to `build/<profile>/javascript/my_app/
+// my_app/web/router.mjs`. Recover the import path from the file name. When
+// the application is bundled, the path is unknown, and the file name is used.
+function moduleName(file) {
+  if (!file) return null
+  const gleam = file.match(/\/javascript\/[^/]+\/(.+)\.mjs$/)
+  if (gleam) return gleam[1]
+  const bundle = file.match(/([^/\\]+)\.[cm]?js$/)
+  return bundle ? bundle[1] : null
 }
 
 export function log(lvl, fields, message, at) {
@@ -35,6 +89,8 @@ export function destroy() {
 class Logger {
   constructor(options) {
     this.buffer = []
+    this.autoAt = options.autoAt
+    this.autoWhen = options.autoWhen
     this.level = levels.asInt(options.level)
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
@@ -59,22 +115,24 @@ class Logger {
   }
 
   #formatMessage(lvl, fields, message, at) {
-    const when = $field.string(formatIso8601())
-    const f1 = $field.append(fields, 'when', when)
-    const f2 = $list.append(f1, this.defaultFields)
-    const f3 = $converter.append_at(f2, at, this.#isColor, this.#isJson)
+    const f1 = $list.append(fields, this.defaultFields)
+    const f2 = this.autoWhen ? $converter.prepend_when(f1, formatIso8601()) : f1
+    const f3 = $converter.prepend_at(f2, at, this.#isColor, this.#isJson)
     if (this.#isJson) return this.#formatJSON(lvl, f3, message)
     const msg = $converter.format_message(message, this.#isColor)
     const f4 = $converter.to_spaced_query_string(f3, this.#isColor)
-    return `${levels.format(lvl, this.color)} ${f4} ${msg}`
+    // Both the fields and the message can be empty: skip them.
+    return [levels.format(lvl, this.color), f4, msg].filter(Boolean).join(' ')
   }
 
   #formatJSON(lvl, fields, message) {
     const message_ = $converter.format_message(message, this.#isColor)
-    const data = $converter
-      .to_json(fields, message_)
-      .entries()
+    const data = $dict
+      .to_list($converter.to_json(fields, message_))
+      .toArray()
       .map(([key, value]) => [key, value?.toArray?.() ?? value ?? null])
+      // Keys are sorted to get a deterministic output, consistent with Erlang.
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
     const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
     return JSON.stringify(data_)
   }

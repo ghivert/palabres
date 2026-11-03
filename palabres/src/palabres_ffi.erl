@@ -1,8 +1,10 @@
 -module(palabres_ffi).
 
--export([configure/1, format/2, log/4]).
+-export([configure/1, format/2, log/4, locate/1]).
 
 -include_lib("palabres/include/palabres@options_Options.hrl").
+
+-define(AUTO_AT_KEY, {palabres, auto_at}).
 
 % Configure Palabres logger, by updating the primary config, and setting things
 % up according to the Palabres configuration.
@@ -14,7 +16,20 @@
 configure(Options) ->
   update_primary_config(Options),
   add_palabres_logger(Options),
-  style_default_logger(Options).
+  style_default_logger(Options),
+  store_auto_at(Options).
+
+% Store the automatic location flag. It is read on every log creation, which
+% is exactly the use case of `persistent_term`: written once at startup, read
+% often. The value is only written when it changes, as every update of a
+% persistent term triggers a global garbage collection.
+-spec store_auto_at(#options{}) -> nil.
+store_auto_at(Options) ->
+  AutoAt = Options#options.auto_at,
+  case persistent_term:get(?AUTO_AT_KEY, undefined) of
+    AutoAt -> nil;
+    _ -> persistent_term:put(?AUTO_AT_KEY, AutoAt), nil
+  end.
 
 % Update the primary config of logger, setting the log level, and filtering
 % some domains by default.
@@ -39,8 +54,7 @@ update_primary_config(Options) ->
 add_palabres_logger(Options) ->
   Color = read_color(Options#options.color),
   logger:add_handler(palabres_logger, logger_std_h,
-    #{formatter => {palabres_ffi, #{color => Color, json => Options#options.json,
-      default_fields => Options#options.default_fields}},
+    #{formatter => {palabres_ffi, format_options(Color, Options)},
       filters => [{palabres_filter, {fun handler_filter/2, continue}}],
       config =>
         case Options#options.output of
@@ -70,15 +84,19 @@ style_default_logger(Options) ->
   case Options#options.style_default of
     false -> logger:update_handler_config(default, #{filters => Filters});
     true ->
-      FormatOptions =
-        #{color => Color,
-          json => Options#options.json,
-          default_fields => Options#options.default_fields},
-      Formatter = {palabres_ffi, FormatOptions},
+      Formatter = {palabres_ffi, format_options(Color, Options)},
       HandlerOptions = #{formatter => Formatter, filters => Filters},
       logger:update_handler_config(default, HandlerOptions)
   end,
   nil.
+
+% Options given to the formatter, shared by the Palabres and default handlers.
+-spec format_options(boolean(), #options{}) -> map().
+format_options(Color, Options) ->
+  #{color => Color,
+    json => Options#options.json,
+    auto_when => Options#options.auto_when,
+    default_fields => Options#options.default_fields}.
 
 % Filter events for the loggers. Behaves differently for Palabres and for the
 % default logger if default style has been overriden.
@@ -124,6 +142,53 @@ read_variable(Name) ->
 log(Level, Msg, Text, At) ->
   logger:log(Level, [{palabres, Msg, Text, At}]),
   nil.
+
+% Locate the function creating the log, by reading the current stack trace and
+% skipping Palabres frames. The stack is only read when the log is going to be
+% printed, i.e. when the level is allowed by the primary configuration, which
+% is what Palabres configures. `logger:allow/2` would be cheaper, but it is
+% not part of the public API.
+% `current_stacktrace` on `self()` does not raise nor suspend anything, and is
+% bounded by `backtrace_depth` (8 by default), which is more than enough as
+% the caller sits at most 3 frames away.
+-spec locate(logger:level()) -> {some, {location, binary(), {some, binary()} | none}} | none.
+locate(Level) ->
+  case persistent_term:get(?AUTO_AT_KEY, true) andalso allowed(Level) of
+    false -> none;
+    true ->
+      {current_stacktrace, Frames} = erlang:process_info(self(), current_stacktrace),
+      first_location(Frames)
+  end.
+
+-spec allowed(logger:level()) -> boolean().
+allowed(Level) ->
+  #{level := Primary} = logger:get_primary_config(),
+  % `lt` means the log is less severe than the primary level, i.e. filtered.
+  logger:compare_levels(Level, Primary) =/= lt.
+
+first_location([{Module, _, _, _} | Rest]) when Module =:= palabres; Module =:= palabres_ffi ->
+  first_location(Rest);
+first_location([{Module, Function, _, _} | _]) ->
+  {some, {location, module_name(Module), {some, function_name(Function)}}};
+first_location([]) ->
+  none.
+
+% Gleam modules are compiled to `my_app@web@router`. Display them as the
+% Gleam import path, `my_app/web/router`.
+-spec module_name(module()) -> binary().
+module_name(Module) ->
+  binary:replace(atom_to_binary(Module), <<"@">>, <<"/">>, [global]).
+
+% Anonymous functions are compiled to `-function/arity-fun-0-`. Recover the
+% name of the enclosing function, which is what the user is looking for.
+-spec function_name(atom()) -> binary().
+function_name(Function) ->
+  case atom_to_binary(Function) of
+    <<"-", Rest/binary>> ->
+      [Name | _] = binary:split(Rest, <<"/">>),
+      Name;
+    Name -> Name
+  end.
 
 % Default entrypoint for the logger module. `palabres_ffi` acts as a logger
 % module, and defines a standard format entrypoint.
@@ -195,43 +260,60 @@ format_msg(Report0, Options) ->
 % to the logger, as well as any module can do. In that case, Palabres will still
 % try to format the log as the user desires.
 format_string_msg(Msg, Options) ->
-  #{color := Color, json := Json, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
   When = palabres_utils_ffi:format_iso8601(),
   case Json of
     true ->
       DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
       JsonData0 = #{'__message' => Msg},
-      JsonData1 = maps:put("when", When, JsonData0),
+      JsonData1 =
+        case AutoWhen of
+          true -> maps:put(<<"when">>, When, JsonData0);
+          false -> JsonData0
+        end,
       JsonData2 = maps:merge(JsonData1, DefaultFields1),
       JsonData2;
     false ->
-      When1 = {string_field, When},
-      Defaults = [],
-      Defaults1 = palabres@internals@field:append(Defaults, <<"when"/utf8>>, When1),
+      Defaults1 = prepend_when([], When, AutoWhen),
       Defaults2 = lists:append(Defaults1, DefaultFields),
       Qs = palabres@internals@converter:to_spaced_query_string(Defaults2, Color),
-      case Color of
-        false -> [$\s, Qs, $\s, Msg];
-        true -> [$\s, Qs, $\s, "\x1b[1m", Msg, "\x1b[0m"]
-      end
+      % `Msg` can be any `unicode:chardata()`, not only a binary.
+      Msg1 =
+        case Color of
+          false -> Msg;
+          true -> ["\x1b[1m", Msg, "\x1b[0m"]
+        end,
+      join_spaced([Qs, Msg1])
   end.
 
 % Format standard Palabres reports. Palabres reports are identified in tuples
 % starting with atom `palabres`. It is expected that no one will send a tuple
 % starting with `palabres` as first argument.
 format_palabres_report(Fields, Msg, At, Options) ->
-  #{color := Color, json := Json, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
   Msg1 = palabres@internals@converter:format_message(Msg, Color),
-  When = {string_field, palabres_utils_ffi:format_iso8601()},
-  Fields1 = palabres@internals@field:append(Fields, <<"when"/utf8>>, When),
-  Fields2 = palabres@internals@converter:append_at(Fields1, At, Color, Json),
-  Fields3 = lists:append(Fields2, DefaultFields),
+  When = palabres_utils_ffi:format_iso8601(),
+  Fields1 = lists:append(Fields, DefaultFields),
+  Fields2 = prepend_when(Fields1, When, AutoWhen),
+  Fields3 = palabres@internals@converter:prepend_at(Fields2, At, Color, Json),
   case Json of
     true -> palabres@internals@converter:to_json(Fields3, Msg1);
     false ->
       Qs = palabres@internals@converter:to_spaced_query_string(Fields3, Color),
-      [$\s, Qs, $\s, Msg1]
+      join_spaced([Qs, Msg1])
   end.
+
+% Join the parts of a text log with single spaces, skipping empty parts: both
+% the fields and the message can be empty.
+-spec join_spaced([unicode:chardata()]) -> iolist().
+join_spaced(Parts) ->
+  [[$\s, Part] || Part <- Parts, Part =/= <<>>, Part =/= []].
+
+% Prepend the `when` field, unless automatic timestamps are deactivated.
+prepend_when(Fields, When, true) ->
+  palabres@internals@converter:prepend_when(Fields, When);
+prepend_when(Fields, _When, false) ->
+  Fields.
 
 % Depending if JSON mode is activated or not:
 % - Wrap a `string` (UTF-8, `binary()`) in a `map()` to use it as foundation.
