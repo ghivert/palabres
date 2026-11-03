@@ -79,7 +79,9 @@ pub fn configure_logger() {
   options.defaults()
   |> options.color(True)
   |> options.json(False)
-  |> options.level(level.Info)
+  // The minimum log level. Defaults to `level.Info`, which means `debug`
+  // logs are dropped unless you lower it, like here.
+  |> options.level(level.Debug)
   |> options.output(to: options.stdout())
   |> palabres.configure
 }
