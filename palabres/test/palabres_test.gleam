@@ -2,6 +2,7 @@ import birdie
 import envoy
 import gleam/list
 import gleam/option
+import gleam/string
 import gleeunit
 import palabres
 import palabres/level.{Debug, Info}
@@ -336,4 +337,38 @@ pub fn should_not_locate_logs_when_disabled_test() {
   let title = "should not locate logs when disabled"
   use <- run_with(title, options, located_messages)
   Nil
+}
+
+fn configure_when(auto_when: Bool) -> Nil {
+  options.defaults()
+  |> options.color(False)
+  |> options.auto_at(False)
+  |> options.auto_when(auto_when)
+  |> options.level(Debug)
+  |> options.output(to: {
+    options.file(test_utils.log_file)
+    |> options.flush(every: 10)
+  })
+  |> palabres.configure
+}
+
+/// `when` is stripped from snapshots, so timestamps are checked by hand.
+fn run_when(auto_when: Bool, next: fn(String) -> Nil) -> Nil {
+  configure_when(auto_when)
+  palabres.log_info("Timestamp testing message")
+  use <- test_utils.sleep(100)
+  let content = test_utils.read_raw_logs()
+  test_utils.destroy_logger()
+  test_utils.remove_logs()
+  next(content)
+}
+
+pub fn should_add_timestamp_test() {
+  use content <- run_when(True)
+  assert string.starts_with(content, "level=info when=")
+}
+
+pub fn should_not_add_timestamp_when_disabled_test() {
+  use content <- run_when(False)
+  assert string.starts_with(content, "level=info Timestamp testing message")
 }

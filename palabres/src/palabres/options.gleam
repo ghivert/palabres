@@ -52,9 +52,12 @@ import palabres/level
 /// - [`auto_at`](#auto_at) Defaults to `True`. \
 ///   Automatically fill the `at` field with the module and function creating
 ///   the log.
+/// - [`auto_when`](#auto_when) Defaults to `True`. \
+///   Automatically fill the `when` field with the timestamp of the log.
 pub opaque type Options {
   Options(
     auto_at: Bool,
+    auto_when: Bool,
     color: Option(Bool),
     default_fields: field.Fields,
     json: Bool,
@@ -96,9 +99,11 @@ pub opaque type Output {
 /// - `output: stdout`
 /// - `style_default_logger: True`
 /// - `auto_at: True`
+/// - `auto_when: True`
 pub fn defaults() -> Options {
   Options(
     auto_at: True,
+    auto_when: True,
     color: None,
     default_fields: [],
     json: False,
@@ -148,6 +153,15 @@ pub fn style_default_logger(options: Options, style_default: Bool) -> Options {
 /// free. Deactivate it on hot paths if every microsecond matters.
 pub fn auto_at(options: Options, enabled: Bool) -> Options {
   Options(..options, auto_at: enabled)
+}
+
+/// Defaults to `True`. \
+/// Activate or deactivate the automatic `when` field, holding the timestamp of
+/// the log in ISO 8601 format. Deactivate it when your log collector adds its
+/// own timestamp, like `journald` or most cloud log processors, to avoid
+/// paying twice for the same information.
+pub fn auto_when(options: Options, enabled: Bool) -> Options {
+  Options(..options, auto_when: enabled)
 }
 
 /// Creates the stdout output.

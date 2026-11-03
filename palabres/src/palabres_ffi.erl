@@ -95,6 +95,7 @@ style_default_logger(Options) ->
 format_options(Color, Options) ->
   #{color => Color,
     json => Options#options.json,
+    auto_when => Options#options.auto_when,
     default_fields => Options#options.default_fields}.
 
 % Filter events for the loggers. Behaves differently for Palabres and for the
@@ -259,41 +260,60 @@ format_msg(Report0, Options) ->
 % to the logger, as well as any module can do. In that case, Palabres will still
 % try to format the log as the user desires.
 format_string_msg(Msg, Options) ->
-  #{color := Color, json := Json, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
   When = palabres_utils_ffi:format_iso8601(),
   case Json of
     true ->
       DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
       JsonData0 = #{'__message' => Msg},
-      JsonData1 = maps:put(<<"when">>, When, JsonData0),
+      JsonData1 =
+        case AutoWhen of
+          true -> maps:put(<<"when">>, When, JsonData0);
+          false -> JsonData0
+        end,
       JsonData2 = maps:merge(JsonData1, DefaultFields1),
       JsonData2;
     false ->
-      Defaults1 = palabres@internals@converter:prepend_when([], When),
+      Defaults1 = prepend_when([], When, AutoWhen),
       Defaults2 = lists:append(Defaults1, DefaultFields),
       Qs = palabres@internals@converter:to_spaced_query_string(Defaults2, Color),
-      case Color of
-        false -> [$\s, Qs, $\s, Msg];
-        true -> [$\s, Qs, $\s, "\x1b[1m", Msg, "\x1b[0m"]
-      end
+      % `Msg` can be any `unicode:chardata()`, not only a binary.
+      Msg1 =
+        case Color of
+          false -> Msg;
+          true -> ["\x1b[1m", Msg, "\x1b[0m"]
+        end,
+      join_spaced([Qs, Msg1])
   end.
 
 % Format standard Palabres reports. Palabres reports are identified in tuples
 % starting with atom `palabres`. It is expected that no one will send a tuple
 % starting with `palabres` as first argument.
 format_palabres_report(Fields, Msg, At, Options) ->
-  #{color := Color, json := Json, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
   Msg1 = palabres@internals@converter:format_message(Msg, Color),
   When = palabres_utils_ffi:format_iso8601(),
   Fields1 = lists:append(Fields, DefaultFields),
-  Fields2 = palabres@internals@converter:prepend_when(Fields1, When),
+  Fields2 = prepend_when(Fields1, When, AutoWhen),
   Fields3 = palabres@internals@converter:prepend_at(Fields2, At, Color, Json),
   case Json of
     true -> palabres@internals@converter:to_json(Fields3, Msg1);
     false ->
       Qs = palabres@internals@converter:to_spaced_query_string(Fields3, Color),
-      [$\s, Qs, $\s, Msg1]
+      join_spaced([Qs, Msg1])
   end.
+
+% Join the parts of a text log with single spaces, skipping empty parts: both
+% the fields and the message can be empty.
+-spec join_spaced([unicode:chardata()]) -> iolist().
+join_spaced(Parts) ->
+  [[$\s, Part] || Part <- Parts, Part =/= <<>>, Part =/= []].
+
+% Prepend the `when` field, unless automatic timestamps are deactivated.
+prepend_when(Fields, When, true) ->
+  palabres@internals@converter:prepend_when(Fields, When);
+prepend_when(Fields, _When, false) ->
+  Fields.
 
 % Depending if JSON mode is activated or not:
 % - Wrap a `string` (UTF-8, `binary()`) in a `map()` to use it as foundation.

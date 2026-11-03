@@ -14,6 +14,7 @@ export function formatIso8601() {
 export function configure(options) {
   logger = new Logger({
     autoAt: options.auto_at,
+    autoWhen: options.auto_when,
     color: options.color,
     json: options.json,
     level: options.level,
@@ -89,6 +90,7 @@ class Logger {
   constructor(options) {
     this.buffer = []
     this.autoAt = options.autoAt
+    this.autoWhen = options.autoWhen
     this.level = levels.asInt(options.level)
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
@@ -114,12 +116,13 @@ class Logger {
 
   #formatMessage(lvl, fields, message, at) {
     const f1 = $list.append(fields, this.defaultFields)
-    const f2 = $converter.prepend_when(f1, formatIso8601())
+    const f2 = this.autoWhen ? $converter.prepend_when(f1, formatIso8601()) : f1
     const f3 = $converter.prepend_at(f2, at, this.#isColor, this.#isJson)
     if (this.#isJson) return this.#formatJSON(lvl, f3, message)
     const msg = $converter.format_message(message, this.#isColor)
     const f4 = $converter.to_spaced_query_string(f3, this.#isColor)
-    return `${levels.format(lvl, this.color)} ${f4} ${msg}`
+    // Both the fields and the message can be empty: skip them.
+    return [levels.format(lvl, this.color), f4, msg].filter(Boolean).join(' ')
   }
 
   #formatJSON(lvl, fields, message) {

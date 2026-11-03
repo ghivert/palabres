@@ -21,9 +21,13 @@ fn encode(a: Dict(String, Dynamic)) -> String
 @external(javascript, "../palabres_test.ffi.mjs", "sleep")
 pub fn sleep(timeout: Int, continuation: fn() -> a) -> Nil
 
-pub fn read_logs() {
+pub fn read_raw_logs() {
   let assert Ok(file) = simplifile.read(log_file)
   file
+}
+
+pub fn read_logs() {
+  read_raw_logs()
   |> string.split("\n")
   |> list.map(clean)
   |> string.join("\n")
