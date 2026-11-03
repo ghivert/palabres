@@ -424,3 +424,30 @@ pub fn should_not_add_timestamp_when_disabled_test() {
   use content <- run_when(False)
   assert string.starts_with(content, "level=info Timestamp testing message")
 }
+
+fn configure_output(json: Bool) -> Nil {
+  options.defaults()
+  |> options.color(False)
+  |> options.auto_at(False)
+  |> options.auto_when(False)
+  |> options.json(json)
+  |> options.output(to: {
+    options.file(test_utils.log_file)
+    |> options.flush(every: 10)
+  })
+  |> palabres.configure
+}
+
+/// Configuring the logger a second time, without destroying it, must apply
+/// the new configuration: here, switching from text to JSON.
+pub fn should_reconfigure_logger_test() {
+  configure_output(False)
+  configure_output(True)
+  palabres.log_info("Reconfigured message")
+  use <- test_utils.sleep(100)
+  let content = string.trim_end(test_utils.read_raw_logs())
+  test_utils.destroy_logger()
+  test_utils.remove_logs()
+  assert content
+    == "{\"__message\":\"Reconfigured message\",\"level\":\"info\"}"
+}

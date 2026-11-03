@@ -29,6 +29,8 @@
   `palabres_domain`, instead of two conflicting `domain` filters.
 - Follow the `NO_COLOR` convention on both targets: any non-empty value disables
   colour, including `false`; an empty value keeps it.
+- Reconfigure the handler when `palabres.configure` is called a second time on
+  Erlang, instead of silently keeping the first configuration.
 
 ### v1.0.4 - 2025-12-24
 

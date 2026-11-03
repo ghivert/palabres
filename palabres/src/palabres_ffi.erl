@@ -50,10 +50,13 @@ update_primary_config(Options) ->
 % Palabres logger should be sent using `log/4`.
 % The Palabres logger can output on standard IO, but can also log in a file,
 % depending on Palabres configuration.
+% When the handler already exists, because `configure/1` has been called
+% before, it is reconfigured in place. `logger_std_h` refuses to change its
+% output once started: in that case, the handler is replaced.
 -spec add_palabres_logger(#options{}) -> nil.
 add_palabres_logger(Options) ->
   Color = read_color(Options#options.color),
-  logger:add_handler(palabres_logger, logger_std_h,
+  Config =
     #{formatter => {palabres_ffi, format_options(Color, Options)},
       filters => [{palabres_filter, {fun handler_filter/2, continue}}],
       config =>
@@ -66,8 +69,18 @@ add_palabres_logger(Options) ->
                   {some, Millis} -> Millis;
                   none -> 5000
                 end}
-        end}),
-  nil.
+        end},
+  case logger:add_handler(palabres_logger, logger_std_h, Config) of
+    {error, {already_exist, palabres_logger}} ->
+      case logger:update_handler_config(palabres_logger, Config) of
+        ok -> nil;
+        {error, _} ->
+          logger:remove_handler(palabres_logger),
+          logger:add_handler(palabres_logger, logger_std_h, Config),
+          nil
+      end;
+    _ -> nil
+  end.
 
 % Style the default logger if desired. Palabres is opinionated, and as such,
 % format the logs in query string or in JSON. By default, Palabres styles every
