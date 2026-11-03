@@ -15,16 +15,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - uses: oven-sh/setup-bun@v2
       - uses: erlef/setup-beam@v1
         with:
           otp-version: '28.0.2'
-          gleam-version: '1.13.0'
+          gleam-version: '1.19.2'
           rebar3-version: '3.25.1'
       - run: gleam deps download
         working-directory: palabres
       - run: gleam test --target erlang
         working-directory: palabres
       - run: gleam test --target javascript
+        working-directory: palabres
+      - run: gleam test --target javascript --runtime bun
         working-directory: palabres
       - run: gleam format --check src test
         working-directory: palabres
@@ -37,7 +40,7 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: '28.0.2'
-          gleam-version: '1.13.0'
+          gleam-version: '1.19.2'
           rebar3-version: '3.25.1'
       - run: gleam deps download
         working-directory: palabres_wisp
