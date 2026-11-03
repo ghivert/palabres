@@ -1,6 +1,6 @@
 -module(palabres_test_ffi).
 
--export([destroy/0, sleep/2, encode/1, format_event/3]).
+-export([destroy/0, sleep/2, encode/1, format_event/3, format_event_with_defaults/2]).
 
 % Timestamp of every synthetic event: 2024-12-15T15:59:17.123Z, in
 % microseconds since the epoch, as `logger` stores it in `meta`.
@@ -34,6 +34,11 @@ encode(A) ->
 % and without trailing newline.
 format_event(Kind, Json, AutoWhen) ->
   format_event(Kind, Json, AutoWhen, []).
+
+% Same, with a default field `service=api`, and without timestamp.
+format_event_with_defaults(Kind, Json) ->
+  Defaults = [{<<"service">>, [{string_field, <<"api">>}]}],
+  format_event(Kind, Json, false, Defaults).
 
 format_event(Kind, Json, AutoWhen, Defaults) ->
   {Msg, Meta} = event(Kind),

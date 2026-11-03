@@ -377,34 +377,19 @@ format_error(Format, Args) ->
 % Format standard string reports. Because of the nature of Palabres, it does
 % not override the standard logger, and as such, user can still send plain text
 % to the logger, as well as any module can do. In that case, Palabres will still
-% try to format the log as the user desires.
+% try to format the log as the user desires: a string message is a Palabres
+% log without fields nor location. `Msg` can be any `unicode:chardata()`,
+% like a charlist, which `json` would encode as an array of integers.
 format_string_msg(Msg, Options) ->
-  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
-  When = palabres_utils_ffi:format_iso8601(),
-  case Json of
-    true ->
-      DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
-      % `Msg` can be any `unicode:chardata()`, like a charlist, which `json`
-      % would encode as an array of integers.
-      JsonData0 = #{'__message' => unicode:characters_to_binary(Msg)},
-      JsonData1 =
-        case AutoWhen of
-          true -> maps:put(<<"when">>, When, JsonData0);
-          false -> JsonData0
-        end,
-      JsonData2 = maps:merge(JsonData1, DefaultFields1),
-      JsonData2;
-    false ->
-      Defaults1 = prepend_when([], When, AutoWhen),
-      Defaults2 = lists:append(Defaults1, DefaultFields),
-      Qs = palabres@internals@converter:to_spaced_query_string(Defaults2, Color),
-      % `Msg` can be any `unicode:chardata()`, not only a binary.
-      Msg1 =
-        case Color of
-          false -> Msg;
-          true -> ["\x1b[1m", Msg, "\x1b[0m"]
-        end,
-      join_spaced([Qs, Msg1])
+  format_palabres_report([], chardata_to_binary(Msg), none, Options).
+
+% Convert chardata to a binary, falling back to its inspection when it is not
+% valid chardata, so that a malformed message never crashes the formatter.
+-spec chardata_to_binary(unicode:chardata()) -> binary().
+chardata_to_binary(Chardata) ->
+  case unicode:characters_to_binary(Chardata) of
+    Binary when is_binary(Binary) -> Binary;
+    _ -> inspect(Chardata)
   end.
 
 % Format standard Palabres reports. Palabres reports are identified in tuples

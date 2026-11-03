@@ -19,6 +19,8 @@
   JSON instead of serialised as arrays of integers, with charlists as strings.
   OTP crash reports are rendered through their `report_cb`, as OTP does, and
   plain `{string, Charlist}` messages are proper JSON strings.
+- Decorate plain `logger` messages like Palabres logs on Erlang: their default
+  fields are scalars in JSON, like on Palabres logs, instead of arrays.
 
 ### v1.0.4 - 2025-12-24
 

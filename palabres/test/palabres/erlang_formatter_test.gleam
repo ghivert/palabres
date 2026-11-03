@@ -13,6 +13,10 @@ pub const timestamp = "2024-12-15T15:59:17.123Z"
 fn format_event(kind: String, json: Bool, auto_when: Bool) -> String
 
 @target(erlang)
+@external(erlang, "palabres_test_ffi", "format_event_with_defaults")
+fn format_event_with_defaults(kind: String, json: Bool) -> String
+
+@target(erlang)
 fn text(kind: String) -> String {
   format_event(kind, False, False)
 }
@@ -35,6 +39,18 @@ pub fn should_format_charlist_messages_test() {
   assert text("string_charlist") == "level=info plain string\n"
   assert json("string_charlist")
     == "{\"__message\":\"plain string\",\"level\":\"info\"}"
+}
+
+@target(erlang)
+/// Default fields decorate plain messages like Palabres logs: a single value
+/// is a scalar in JSON, not an array.
+pub fn should_decorate_messages_with_default_fields_test() {
+  assert format_event_with_defaults("string_charlist", False)
+    == "level=info service=api plain string\n"
+  assert format_event_with_defaults("string_charlist", True)
+    == "{\"__message\":\"plain string\",\"level\":\"info\",\"service\":\"api\"}"
+  assert format_event_with_defaults("map_report", True)
+    == "{\"action\":\"login\",\"level\":\"info\",\"service\":\"api\",\"user\":42}"
 }
 
 @target(erlang)
