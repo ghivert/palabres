@@ -7,8 +7,18 @@
   for log collectors adding their own timestamp.
 - Fix JSON output on JavaScript with `gleam_stdlib` 1.0, and sort JSON keys to
   get the same output on both targets.
-- Sort `PALABRES_*` environment variables to keep default fields in a
-  deterministic order.
+- Add `options.fields` and the public `palabres/field` module to attach
+  fields to every log. It replaces the hidden `options.default_*` and
+  `options.default_lazy_*` functions: build fields with `field.string`,
+  `field.int`, `field.float`, `field.bool`, `field.null`, `field.nullable`,
+  `field.list` and `field.lazy`, and pass them in one list.
+- A field set on a log now takes precedence over a global field with the same
+  key. Global fields used to overwrite the log field in JSON output, and to be
+  duplicated in string output.
+- `PALABRES_*` environment variables are no longer read implicitly by
+  `palabres.configure`. Read them explicitly with
+  `field.from_environment(prefix: "PALABRES_")`. Values are always strings,
+  instead of being guessed as booleans, integers or floats.
 
 ### v1.0.4 - 2025-12-24
 

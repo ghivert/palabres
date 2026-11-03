@@ -10,7 +10,6 @@ pub opaque type Field {
   BoolField(Bool)
   IntField(Int)
   FloatField(Float)
-  LazyField(fn() -> Field)
   NullField
 }
 
@@ -32,23 +31,6 @@ pub const float = FloatField
 /// Converst `null` to a `Field`.
 pub const null = NullField
 
-/// Lazify a `Field`.
-pub const lazy = LazyField
-
-pub fn default_fields_to_dynamic(
-  fields: List(#(String, List(Field))),
-) -> Dynamic {
-  dynamic.properties({
-    use #(key, values) <- list.map(fields)
-    #(dynamic.string(key), {
-      dynamic.list({
-        use value <- list.map(values)
-        to_dynamic(value)
-      })
-    })
-  })
-}
-
 /// Convert a `Field` to a `Dynamic` value.
 pub fn to_dynamic(value: Field) -> Dynamic {
   case value {
@@ -57,11 +39,6 @@ pub fn to_dynamic(value: Field) -> Dynamic {
     IntField(int) -> dynamic.int(int)
     StringField(string) -> dynamic.string(string)
     NullField -> do_null()
-    LazyField(fun) ->
-      case fun() {
-        LazyField(_) -> panic as "Impossible state"
-        result -> to_dynamic(result)
-      }
   }
 }
 
@@ -74,20 +51,26 @@ pub fn to_string(value: Field) -> String {
     IntField(int) -> int.to_string(int)
     StringField(string) -> string
     NullField -> "null"
-    LazyField(fun) ->
-      case fun() {
-        LazyField(_) -> panic as "Impossible state"
-        result -> to_string(result)
-      }
   }
 }
 
 pub fn append(fields: Fields, key: String, value: Field) -> Fields {
-  fields
-  |> list.key_find(key)
-  |> result.unwrap([])
-  |> list.prepend(value)
-  |> list.key_set(fields, key, _)
+  case list.key_find(fields, key) {
+    Ok(values) -> list.key_set(fields, key, [value, ..values])
+    Error(_) -> list.key_set(fields, key, [value])
+  }
+}
+
+/// Merge the global fields in the fields of a log. A field set on the log
+/// wins over a global field with the same key: the global field is dropped.
+/// Globals are added after the log fields, to keep them at the end of the
+/// line in query string output.
+pub fn merge(fields: Fields, globals: Fields) -> Fields {
+  let globals = {
+    use #(key, _) <- list.filter(globals)
+    !result.is_ok(list.key_find(fields, key))
+  }
+  list.append(fields, globals)
 }
 
 @external(erlang, "palabres_utils_ffi", "null")

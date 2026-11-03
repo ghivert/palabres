@@ -40,8 +40,7 @@ update_primary_config(Options) ->
     filter_default => log,
     filters =>
       [{domain, {fun logger_filters:domain/2, {stop, sub, [otp, sasl]}}},
-       {domain, {fun logger_filters:domain/2, {stop, sub, [supervisor_report]}}}],
-    metadata => palabres@internals@field:default_fields_to_dynamic(Options#options.default_fields)}),
+       {domain, {fun logger_filters:domain/2, {stop, sub, [supervisor_report]}}}]}),
   nil.
 
 % Add the `palabres_logger` to the logger, living besides the `default` logger.
@@ -96,7 +95,7 @@ format_options(Color, Options) ->
   #{color => Color,
     json => Options#options.json,
     auto_when => Options#options.auto_when,
-    default_fields => Options#options.default_fields}.
+    fields => Options#options.fields}.
 
 % Filter events for the loggers. Behaves differently for Palabres and for the
 % default logger if default style has been overriden.
@@ -260,23 +259,25 @@ format_msg(Report0, Options) ->
 % to the logger, as well as any module can do. In that case, Palabres will still
 % try to format the log as the user desires.
 format_string_msg(Msg, Options) ->
-  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, fields := Fields} = Options,
   When = palabres_utils_ffi:format_iso8601(),
+  % Global fields are resolved on every log, as they can be lazy.
+  Globals = palabres@field:resolve(Fields),
   case Json of
     true ->
-      DefaultFields1 = palabres@internals@field:default_fields_to_dynamic(DefaultFields),
+      Globals1 = palabres@internals@converter:to_json(Globals, <<>>),
       JsonData0 = #{'__message' => Msg},
       JsonData1 =
         case AutoWhen of
           true -> maps:put(<<"when">>, When, JsonData0);
           false -> JsonData0
         end,
-      JsonData2 = maps:merge(JsonData1, DefaultFields1),
+      JsonData2 = maps:merge(JsonData1, Globals1),
       JsonData2;
     false ->
-      Defaults1 = prepend_when([], When, AutoWhen),
-      Defaults2 = lists:append(Defaults1, DefaultFields),
-      Qs = palabres@internals@converter:to_spaced_query_string(Defaults2, Color),
+      Fields1 = prepend_when([], When, AutoWhen),
+      Fields2 = lists:append(Fields1, Globals),
+      Qs = palabres@internals@converter:to_spaced_query_string(Fields2, Color),
       % `Msg` can be any `unicode:chardata()`, not only a binary.
       Msg1 =
         case Color of
@@ -290,10 +291,13 @@ format_string_msg(Msg, Options) ->
 % starting with atom `palabres`. It is expected that no one will send a tuple
 % starting with `palabres` as first argument.
 format_palabres_report(Fields, Msg, At, Options) ->
-  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, fields := Globals} = Options,
   Msg1 = palabres@internals@converter:format_message(Msg, Color),
   When = palabres_utils_ffi:format_iso8601(),
-  Fields1 = lists:append(Fields, DefaultFields),
+  % Global fields are resolved on every log, as they can be lazy. A field set
+  % on the log wins over a global field with the same key.
+  Globals1 = palabres@field:resolve(Globals),
+  Fields1 = palabres@internals@field:merge(Fields, Globals1),
   Fields2 = prepend_when(Fields1, When, AutoWhen),
   Fields3 = palabres@internals@converter:prepend_at(Fields2, At, Color, Json),
   case Json of

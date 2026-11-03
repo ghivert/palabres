@@ -1,4 +1,6 @@
 import * as $converter from './palabres/internals/converter.mjs'
+import * as $field from './palabres/field.mjs'
+import * as $internalField from './palabres/internals/field.mjs'
 import * as levels from './palabres/level.ffi.mjs'
 import { Location } from './palabres/internals/location.mjs'
 import * as $dict from '../gleam_stdlib/gleam/dict.mjs'
@@ -19,7 +21,7 @@ export function configure(options) {
     json: options.json,
     level: options.level,
     output: options.output,
-    defaultFields: options.default_fields,
+    fields: options.fields,
   })
 }
 
@@ -95,7 +97,7 @@ class Logger {
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
-    this.defaultFields = options.defaultFields
+    this.fields = options.fields
     if (this.output.flush_interval) {
       const timer = this.output.flush_interval[0]
       if (timer) this.interval = setInterval(() => this.#flush(), timer)
@@ -115,7 +117,9 @@ class Logger {
   }
 
   #formatMessage(lvl, fields, message, at) {
-    const f1 = $list.append(fields, this.defaultFields)
+    // Global fields are resolved on every log, as they can be lazy. A field
+    // set on the log wins over a global field with the same key.
+    const f1 = $internalField.merge(fields, $field.resolve(this.fields))
     const f2 = this.autoWhen ? $converter.prepend_when(f1, formatIso8601()) : f1
     const f3 = $converter.prepend_at(f2, at, this.#isColor, this.#isJson)
     if (this.#isJson) return this.#formatJSON(lvl, f3, message)

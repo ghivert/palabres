@@ -105,6 +105,39 @@ level=debg at=my_app.log_message when=2024-12-16T17:43:40Z my_field=content my_o
 Location and timestamp can be deactivated with `options.auto_at(False)` and
 `options.auto_when(False)`.
 
+### Global fields
+
+Some context is true for the whole process: the service name, its version, the
+hostname, the environment… Declare it once with `options.fields`, and it is
+added to every log, including, on Erlang, the logs of other libraries flowing
+through `logger`. Fields are built with the `palabres/field` module, which
+mirrors the `palabres.string`, `palabres.int`, etc. functions used on logs.
+
+```gleam
+import palabres
+import palabres/field
+import palabres/options
+
+pub fn configure_logger() {
+  options.defaults()
+  |> options.fields([
+    field.string("service", "my_service"),
+    field.int("version", 3),
+    // Computed every time a log is printed, not once at configuration.
+    field.lazy(fn() { field.string("hostname", read_hostname()) }),
+    // Read the `PALABRES_*` environment variables, as string fields.
+    ..field.from_environment(prefix: "PALABRES_")
+  ])
+  |> palabres.configure
+}
+```
+
+```
+level=info at=my_app.main service=my_service version=3 hostname=web-1 Server started
+```
+
+A field set on a log takes precedence over a global field with the same key.
+
 Find the entire explanations on
 [Hexdocs](https://hexdocs.pm/palabres/palabres.html).
 

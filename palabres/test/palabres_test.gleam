@@ -5,6 +5,7 @@ import gleam/option
 import gleam/string
 import gleeunit
 import palabres
+import palabres/field
 import palabres/level.{Debug, Info}
 import palabres/options
 import palabres/test_utils
@@ -19,17 +20,10 @@ fn configure_logger(opts: Options) -> Nil {
   |> options.json(opts.json)
   |> options.level(opts.level)
   |> options.output(to: {
-    options.file(test_utils.log_file)
+    options.file(test_utils.log_file())
     |> options.flush(every: 10)
   })
-  |> list.fold(opts.default_fields, _, fn(options, default_field) {
-    let #(key, value) = default_field
-    options.default_string(options, key, value)
-  })
-  |> list.fold(opts.default_lazy_fields, _, fn(options, default_lazy_field) {
-    let #(key, value) = default_lazy_field
-    options.default_lazy_string(options, key, value)
-  })
+  |> options.fields(opts.fields)
   |> options.style_default_logger(True)
   |> options.auto_at(opts.auto_at)
   |> palabres.configure
@@ -94,8 +88,7 @@ type Options {
     color: Bool,
     json: Bool,
     level: level.Level,
-    default_fields: List(#(String, String)),
-    default_lazy_fields: List(#(String, fn() -> String)),
+    fields: List(field.Field),
   )
 }
 
@@ -122,218 +115,193 @@ fn run_with(
 
 pub fn should_print_in_color_test() {
   use <- run("should print in color", {
-    Options(
-      auto_at: True,
-      color: True,
-      json: False,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: True, json: False, level: Debug, fields: [])
   })
   Nil
 }
 
 pub fn should_print_without_color_test() {
   use <- run("should print without color", {
-    Options(
-      auto_at: True,
-      color: False,
-      json: False,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: False, json: False, level: Debug, fields: [])
   })
   Nil
 }
 
 pub fn should_print_in_json_test() {
   use <- run("should print in JSON", {
-    Options(
-      auto_at: True,
-      color: False,
-      json: True,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: False, json: True, level: Debug, fields: [])
   })
   Nil
 }
 
 pub fn should_print_in_json_and_ignore_color_test() {
   use <- run("should print in JSON and ignore color", {
-    Options(
-      auto_at: True,
-      color: True,
-      json: True,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: True, json: True, level: Debug, fields: [])
   })
   Nil
 }
 
 pub fn should_ignore_low_levels_test() {
   use <- run("should ignore low levels", {
-    Options(
-      auto_at: True,
-      color: True,
-      json: True,
-      level: Info,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: True, json: True, level: Info, fields: [])
   })
   Nil
 }
 
-pub fn should_use_default_fields_test() {
-  use <- run("should use default fields", {
+fn global_fields() {
+  [
+    field.string("global_field1", "example1"),
+    field.int("global_field2", 2),
+    field.string("global_field1", "example3"),
+    field.list("global_field3", [1, 2], field.int),
+    field.nullable("global_field4", option.None, field.string),
+    field.bool("global_field5", True),
+  ]
+}
+
+fn global_lazy_fields() {
+  [
+    field.lazy(fn() { field.string("global_lazy_field1", "lazy-example1") }),
+    field.lazy(fn() { field.string("global_lazy_field2", "lazy-example2") }),
+    field.lazy(fn() { field.string("global_lazy_field1", "lazy-example3") }),
+  ]
+}
+
+pub fn should_use_global_fields_test() {
+  use <- run("should use global fields", {
     Options(
       auto_at: True,
       color: True,
       json: False,
       level: Debug,
-      default_lazy_fields: [],
-      default_fields: [
-        #("default_field1", "example1"),
-        #("default_field2", "example2"),
-        #("default_field1", "example3"),
-      ],
+      fields: global_fields(),
     )
   })
   Nil
 }
 
-pub fn should_use_json_default_fields_test() {
-  use <- run("should use JSON default fields", {
+pub fn should_use_json_global_fields_test() {
+  use <- run("should use JSON global fields", {
     Options(
       auto_at: True,
       color: True,
       json: True,
       level: Debug,
-      default_lazy_fields: [],
-      default_fields: [
-        #("default_field1", "example1"),
-        #("default_field2", "example2"),
-        #("default_field1", "example3"),
-      ],
+      fields: global_fields(),
     )
   })
   Nil
 }
 
-pub fn should_use_default_lazy_fields_test() {
-  use <- run("should use default lazy fields", {
+pub fn should_use_global_lazy_fields_test() {
+  use <- run("should use global lazy fields", {
     Options(
       auto_at: True,
       color: True,
       json: False,
       level: Debug,
-      default_fields: [],
-      default_lazy_fields: [
-        #("default_lazy_field1", fn() { "lazy-example1" }),
-        #("default_lazy_field2", fn() { "lazy-example2" }),
-        #("default_lazy_field1", fn() { "lazy-example3" }),
-      ],
+      fields: global_lazy_fields(),
     )
   })
   Nil
 }
 
-pub fn should_use_json_default_lazy_fields_test() {
-  use <- run("should use JSON default lazy fields", {
+pub fn should_use_json_global_lazy_fields_test() {
+  use <- run("should use JSON global lazy fields", {
     Options(
       auto_at: True,
       color: True,
       json: True,
       level: Debug,
-      default_fields: [],
-      default_lazy_fields: [
-        #("default_lazy_field1", fn() { "lazy-example1" }),
-        #("default_lazy_field2", fn() { "lazy-example2" }),
-        #("default_lazy_field1", fn() { "lazy-example3" }),
-      ],
+      fields: global_lazy_fields(),
     )
   })
+  Nil
+}
+
+/// A field set on the log wins over a global field with the same key.
+fn overriding_messages() {
+  palabres.info("Overriding testing message")
+  |> palabres.at("palabres_test", "messages")
+  |> palabres.string("global_field1", "from_log")
+  |> palabres.log
+}
+
+pub fn should_override_global_fields_test() {
+  let options =
+    Options(auto_at: True, color: False, json: False, level: Debug, fields: [
+      field.string("global_field1", "from_global"),
+      field.string("global_field2", "from_global"),
+    ])
+  let title = "should override global fields"
+  use <- run_with(title, options, overriding_messages)
+  Nil
+}
+
+pub fn should_override_json_global_fields_test() {
+  let options =
+    Options(auto_at: True, color: False, json: True, level: Debug, fields: [
+      field.string("global_field1", "from_global"),
+      field.string("global_field2", "from_global"),
+    ])
+  let title = "should override JSON global fields"
+  use <- run_with(title, options, overriding_messages)
   Nil
 }
 
 pub fn should_use_environment_variables_test() {
-  envoy.set("PALABRES_DEFAULT_FIELD1", "example1")
-  envoy.set("PALABRES_DEFAULT_FIELD2", "example2")
-  use <- run("should use default fields environment variables", {
+  envoy.set("PALABRES_GLOBAL_FIELD1", "example1")
+  envoy.set("PALABRES_GLOBAL_FIELD2", "example2")
+  envoy.set("OTHER_GLOBAL_FIELD3", "example3")
+  use <- run("should use global fields environment variables", {
     Options(
       auto_at: True,
       color: True,
       json: False,
       level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
+      fields: field.from_environment(prefix: "PALABRES_"),
     )
   })
-  envoy.unset("PALABRES_DEFAULT_FIELD1")
-  envoy.unset("PALABRES_DEFAULT_FIELD2")
+  envoy.unset("PALABRES_GLOBAL_FIELD1")
+  envoy.unset("PALABRES_GLOBAL_FIELD2")
+  envoy.unset("OTHER_GLOBAL_FIELD3")
 }
 
 pub fn should_use_json_environment_variables_test() {
-  envoy.set("PALABRES_DEFAULT_FIELD1", "example1")
-  envoy.set("PALABRES_DEFAULT_FIELD2", "example2")
-  use <- run("should use JSON default fields environment variables", {
+  envoy.set("PALABRES_GLOBAL_FIELD1", "example1")
+  envoy.set("PALABRES_GLOBAL_FIELD2", "example2")
+  envoy.set("OTHER_GLOBAL_FIELD3", "example3")
+  use <- run("should use JSON global fields environment variables", {
     Options(
       auto_at: True,
       color: True,
       json: True,
       level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
+      fields: field.from_environment(prefix: "PALABRES_"),
     )
   })
-  envoy.unset("PALABRES_DEFAULT_FIELD1")
-  envoy.unset("PALABRES_DEFAULT_FIELD2")
+  envoy.unset("PALABRES_GLOBAL_FIELD1")
+  envoy.unset("PALABRES_GLOBAL_FIELD2")
+  envoy.unset("OTHER_GLOBAL_FIELD3")
 }
 
 pub fn should_locate_logs_test() {
   let options =
-    Options(
-      auto_at: True,
-      color: True,
-      json: False,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: True, json: False, level: Debug, fields: [])
   use <- run_with("should locate logs", options, located_messages)
   Nil
 }
 
 pub fn should_locate_logs_in_json_test() {
   let options =
-    Options(
-      auto_at: True,
-      color: False,
-      json: True,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: True, color: False, json: True, level: Debug, fields: [])
   use <- run_with("should locate logs in JSON", options, located_messages)
   Nil
 }
 
 pub fn should_not_locate_logs_when_disabled_test() {
   let options =
-    Options(
-      auto_at: False,
-      color: False,
-      json: False,
-      level: Debug,
-      default_lazy_fields: [],
-      default_fields: [],
-    )
+    Options(auto_at: False, color: False, json: False, level: Debug, fields: [])
   let title = "should not locate logs when disabled"
   use <- run_with(title, options, located_messages)
   Nil
@@ -346,7 +314,7 @@ fn configure_when(auto_when: Bool) -> Nil {
   |> options.auto_when(auto_when)
   |> options.level(Debug)
   |> options.output(to: {
-    options.file(test_utils.log_file)
+    options.file(test_utils.log_file())
     |> options.flush(every: 10)
   })
   |> palabres.configure

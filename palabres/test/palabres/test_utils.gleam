@@ -1,3 +1,4 @@
+import envoy
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
@@ -7,7 +8,12 @@ import gleam/result
 import gleam/string
 import simplifile
 
-pub const log_file = "/tmp/palabres.log"
+/// File receiving the logs during tests. Set `TEST_PALABRES_LOG_FILE` to
+/// run several test suites at the same time without sharing the same file.
+pub fn log_file() -> String {
+  envoy.get("TEST_PALABRES_LOG_FILE")
+  |> result.unwrap("/tmp/palabres.log")
+}
 
 @external(erlang, "palabres_test_ffi", "destroy")
 @external(javascript, "../palabres.ffi.mjs", "destroy")
@@ -22,7 +28,7 @@ fn encode(a: Dict(String, Dynamic)) -> String
 pub fn sleep(timeout: Int, continuation: fn() -> a) -> Nil
 
 pub fn read_raw_logs() {
-  let assert Ok(file) = simplifile.read(log_file)
+  let assert Ok(file) = simplifile.read(log_file())
   file
 }
 
@@ -34,7 +40,7 @@ pub fn read_logs() {
 }
 
 pub fn remove_logs() {
-  let _ = simplifile.delete(log_file)
+  let _ = simplifile.delete(log_file())
   Nil
 }
 

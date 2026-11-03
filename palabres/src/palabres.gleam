@@ -54,6 +54,15 @@
 //// specific field, they're simply dumped as is in the string format, or under
 //// the `message` field in JSON.
 ////
+//// #### Global fields
+////
+//// Some context is true for the whole process, like the service name, its
+//// version or the hostname. Declare it once with
+//// [`options.fields`](./palabres/options.html#fields), using the
+//// [`palabres/field`](./palabres/field.html) module, and it is added to every
+//// log. A field set on a log takes precedence over a global field with the
+//// same key.
+////
 //// ### Usage Example
 ////
 //// ```gleam
@@ -101,15 +110,10 @@
 //// every logs _should go_ through the Palabres package, otherwise the logger
 //// won't be able to format them accordingly.
 
-import envoy
-import gleam/bool
-import gleam/dict
-import gleam/float
-import gleam/int
 import gleam/list
 import gleam/option.{type Option, Some}
-import gleam/string
-import palabres/internals/field.{type Fields}
+import palabres/field.{type Field}
+import palabres/internals/field.{type Fields} as _
 import palabres/internals/location.{type Location, Location}
 import palabres/level
 import palabres/options.{type Options}
@@ -119,33 +123,7 @@ import palabres/options.{type Options}
 /// get Palabres logger running. Each logger call will then go through Palabres
 /// on BEAM. On JavaScript, calling `palabres` functions are still required.
 pub fn configure(options: Options) -> Nil {
-  // Environment variables are sorted to keep the fields order deterministic,
-  // as `envoy.all()` iteration order depends on the runtime.
-  let environment =
-    list.sort(dict.to_list(envoy.all()), by: fn(a, b) {
-      string.compare(a.0, b.0)
-    })
-  do_configure({
-    use options, #(key, value) <- list.fold(environment, options)
-    let key = string.lowercase(key)
-    let is_palabres_key = string.starts_with(key, "palabres_")
-    use <- bool.guard(when: !is_palabres_key, return: options)
-    let key = string.drop_start(key, 9)
-    case value {
-      "true" -> options.default_bool(options, key, True)
-      "false" -> options.default_bool(options, key, False)
-      _ -> {
-        case float.parse(value) {
-          Ok(value) -> options.default_float(options, key, value)
-          Error(_) ->
-            case int.parse(value) {
-              Ok(value) -> options.default_int(options, key, value)
-              Error(_) -> options.default_string(options, key, value)
-            }
-        }
-      }
-    }
-  })
+  do_configure(options)
 }
 
 @external(erlang, "palabres_ffi", "configure")
@@ -165,12 +143,7 @@ fn do_configure(options: Options) -> Nil
 /// }
 /// ```
 pub opaque type Log {
-  Log(
-    level: level.Level,
-    fields: field.Fields,
-    message: String,
-    at: Option(Location),
-  )
+  Log(level: level.Level, fields: Fields, message: String, at: Option(Location))
 }
 
 /// Creates an `Emergency` `Log` instance. Should be used as a starting point
@@ -411,10 +384,7 @@ pub fn at(log: Log, module module: String, function function: String) -> Log {
 /// |> palabres.log
 /// ```
 pub fn string(log: Log, key: String, value: String) -> Log {
-  Log(..log, fields: {
-    let value = field.string(value)
-    field.append(log.fields, key, value)
-  })
+  add_field(log, field.string(key, value))
 }
 
 /// Add an int field to your structured data.
@@ -426,10 +396,7 @@ pub fn string(log: Log, key: String, value: String) -> Log {
 /// |> palabres.log
 /// ```
 pub fn int(log: Log, key: String, value: Int) -> Log {
-  Log(..log, fields: {
-    let value = field.int(value)
-    field.append(log.fields, key, value)
-  })
+  add_field(log, field.int(key, value))
 }
 
 /// Add a float field to your structured data.
@@ -441,10 +408,7 @@ pub fn int(log: Log, key: String, value: Int) -> Log {
 /// |> palabres.log
 /// ```
 pub fn float(log: Log, key: String, value: Float) -> Log {
-  Log(..log, fields: {
-    let value = field.float(value)
-    field.append(log.fields, key, value)
-  })
+  add_field(log, field.float(key, value))
 }
 
 /// Add a boolean field to your structured data.
@@ -456,10 +420,7 @@ pub fn float(log: Log, key: String, value: Float) -> Log {
 /// |> palabres.log
 /// ```
 pub fn bool(log: Log, key: String, value: Bool) -> Log {
-  Log(..log, fields: {
-    let value = field.bool(value)
-    field.append(log.fields, key, value)
-  })
+  add_field(log, field.bool(key, value))
 }
 
 /// Add a potentially null value to your structured data.
@@ -479,12 +440,7 @@ pub fn nullable(
 ) -> Log {
   case value {
     Some(value) -> add(log, key, value)
-    option.None -> {
-      Log(..log, fields: {
-        let value = field.null
-        field.append(log.fields, key, value)
-      })
-    }
+    option.None -> add_field(log, field.null(key))
   }
 }
 
@@ -534,4 +490,8 @@ fn do_log(
 fn init(level: level.Level, message: String) {
   let at = location.capture(level)
   Log(level:, fields: [], message:, at:)
+}
+
+fn add_field(log: Log, value: Field) -> Log {
+  Log(..log, fields: field.add(log.fields, value))
 }

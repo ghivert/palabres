@@ -1,0 +1,8 @@
+---
+version: 1.5.5
+title: erlang_should use JSON global fields
+---
+{"__message":"Debug testing message","at":"palabres_test.messages","global_field1":["example3","example1"],"global_field2":2,"global_field3":[1,2],"global_field4":null,"global_field5":true,"level":"debug","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
+{"__message":"Info testing message","at":"palabres_test.messages","global_field1":["example3","example1"],"global_field2":2,"global_field3":[1,2],"global_field4":null,"global_field5":true,"level":"info","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
+{"__message":"Alert testing message","at":"palabres_test.messages","global_field1":["example3","example1"],"global_field2":2,"global_field3":[1,2],"global_field4":null,"global_field5":true,"level":"alert","test_field1":"test_value1","test_field2":1,"test_field3":1.0,"test_field4":null,"test_field5":1}
+
