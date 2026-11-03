@@ -83,6 +83,12 @@ export function log(lvl, fields, message, at) {
   logger?.log(lvl, fields, message, at)
 }
 
+// Whether a log at that level would be printed. Without a configured logger,
+// nothing is printed, so nothing deferred is worth computing.
+export function isAllowed(lvl) {
+  return logger !== null && levels.asInt(lvl) >= logger.level
+}
+
 export function destroy() {
   logger?.destroy()
   logger = null

@@ -1,5 +1,8 @@
 ### Unreleased
 
+- Add `palabres.lazy` to defer part of a log construction until the log is
+  emitted, so expensive fields are never computed for logs dropped by the
+  configured level.
 - Automatically add the `at` field to every log, pointing to the module and
   the function creating the log. `palabres.at` is now only needed to override
   the detected location. Deactivate it with `options.auto_at(False)`.

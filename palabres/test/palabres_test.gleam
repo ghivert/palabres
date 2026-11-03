@@ -82,6 +82,30 @@ fn located_messages() {
   |> palabres.log
 }
 
+/// Messages with deferred fields. Run with level `Info`, so the debug log
+/// must never evaluate its function: it would crash the test.
+fn lazy_messages() {
+  palabres.info("Lazy message")
+  |> palabres.at("palabres_test", "lazy_messages")
+  |> palabres.lazy(fn(log) {
+    log
+    |> palabres.string("lazy_field1", "lazy_value1")
+    |> palabres.int("lazy_field2", 2)
+  })
+  |> palabres.string("eager_field", "eager_value")
+  |> palabres.lazy(fn(log) {
+    log
+    |> palabres.string("lazy_field3", "lazy_value3")
+    |> palabres.lazy(palabres.bool(_, "nested_lazy_field", True))
+  })
+  |> palabres.log
+
+  palabres.debug("Dropped lazy message")
+  |> palabres.at("palabres_test", "lazy_messages")
+  |> palabres.lazy(fn(_) { panic as "lazy function evaluated on a dropped log" })
+  |> palabres.log
+}
+
 type Options {
   Options(
     auto_at: Bool,
@@ -304,6 +328,20 @@ pub fn should_not_locate_logs_when_disabled_test() {
     Options(auto_at: False, color: False, json: False, level: Debug, fields: [])
   let title = "should not locate logs when disabled"
   use <- run_with(title, options, located_messages)
+  Nil
+}
+
+pub fn should_defer_lazy_fields_test() {
+  let options =
+    Options(auto_at: False, color: False, json: False, level: Info, fields: [])
+  use <- run_with("should defer lazy fields", options, lazy_messages)
+  Nil
+}
+
+pub fn should_defer_lazy_fields_in_json_test() {
+  let options =
+    Options(auto_at: False, color: False, json: True, level: Info, fields: [])
+  use <- run_with("should defer lazy fields in JSON", options, lazy_messages)
   Nil
 }
 

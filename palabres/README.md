@@ -105,6 +105,19 @@ level=debg at=my_app.log_message when=2024-12-16T17:43:40Z my_field=content my_o
 Location and timestamp can be deactivated with `options.auto_at(False)` and
 `options.auto_when(False)`.
 
+Fields that are expensive to compute can be deferred with `palabres.lazy`: the
+function only runs when the log is emitted, so a dropped `debug` log costs
+nothing.
+
+```gleam
+palabres.debug("User fetched")
+|> palabres.lazy(fn(log) {
+  log
+  |> palabres.string("user", render_user(user))
+})
+|> palabres.log
+```
+
 ### Global fields
 
 Some context is true for the whole process: the service name, its version, the

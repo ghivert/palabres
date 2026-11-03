@@ -1,6 +1,6 @@
 -module(palabres_ffi).
 
--export([configure/1, format/2, log/4, locate/1]).
+-export([configure/1, format/2, log/4, locate/1, allowed/1]).
 
 -include_lib("palabres/include/palabres@options_Options.hrl").
 
@@ -159,6 +159,8 @@ locate(Level) ->
       first_location(Frames)
   end.
 
+% Whether the primary configuration lets a log at that level through. Also
+% used by `palabres:log/1` to skip deferred computations on dropped logs.
 -spec allowed(logger:level()) -> boolean().
 allowed(Level) ->
   #{level := Primary} = logger:get_primary_config(),

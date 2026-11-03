@@ -22,6 +22,11 @@
 //// that you're free to add to help in further usages. Those additionnal data
 //// are free, so it's up to you to determine how to use them efficiently!
 ////
+//// Gleam evaluates every argument eagerly, so a field computed from an
+//// expensive value is computed even when the log is dropped by the configured
+//// level. Wrap those fields in [`lazy`](#lazy) to run them only when the log
+//// is actually emitted, like Erlang `logger` macros do with their arguments.
+////
 //// #### Handling logs
 ////
 //// Because logs are handled in multiple manners nowadays, Palabres provides two
@@ -110,6 +115,7 @@
 //// every logs _should go_ through the Palabres package, otherwise the logger
 //// won't be able to format them accordingly.
 
+import gleam/bool
 import gleam/list
 import gleam/option.{type Option, Some}
 import palabres/field.{type Field}
@@ -143,7 +149,13 @@ fn do_configure(options: Options) -> Nil
 /// }
 /// ```
 pub opaque type Log {
-  Log(level: level.Level, fields: Fields, message: String, at: Option(Location))
+  Log(
+    level: level.Level,
+    fields: Fields,
+    message: String,
+    at: Option(Location),
+    lazy: List(fn(Log) -> Log),
+  )
 }
 
 /// Creates an `Emergency` `Log` instance. Should be used as a starting point
@@ -463,16 +475,56 @@ pub fn list(
   add(log, key, value)
 }
 
+/// Defer part of the log construction until the log is emitted. The
+/// function runs in [`log`](#log), only when the level of the log is enabled,
+/// so expensive values are never computed for logs that are dropped. This is
+/// the equivalent of Erlang `logger` macros, which evaluate their arguments
+/// only when the log is allowed.
+///
+/// ```gleam
+/// palabres.debug("User fetched")
+/// |> palabres.string("request_id", request_id)
+/// |> palabres.lazy(fn(log) {
+///   log
+///   |> palabres.string("user", render_user(user))
+///   |> palabres.int("cart_size", count_cart(user))
+/// })
+/// |> palabres.log
+/// ```
+///
+/// Any function of `Log` can be used inside, including `at` and nested
+/// `lazy`. Fields added lazily come after the fields added eagerly, whatever
+/// the position of `lazy` in the pipeline. The function runs in the calling
+/// process, right before the log is written: an exception inside propagates
+/// to the caller, like any other code.
+pub fn lazy(log: Log, add: fn(Log) -> Log) -> Log {
+  Log(..log, lazy: [add, ..log.lazy])
+}
+
 /// Run your log and make it display in your log output.
 ///
 /// ```gleam
 /// palabres.info("Example")
 /// |> palabres.log
 /// ```
-pub fn log(log: Log) -> Nil {
-  let Log(level:, message:, fields:, at:) = log
-  do_log(level, fields, message, at)
+pub fn log(entry: Log) -> Nil {
+  case entry.lazy {
+    // Without deferred work, the logger does the filtering itself.
+    [] -> do_log(entry.level, entry.fields, entry.message, entry.at)
+    lazy -> {
+      use <- bool.guard(when: !is_allowed(entry.level), return: Nil)
+      let entry = Log(..entry, lazy: [])
+      // Deferred functions can defer more work: loop until none is left.
+      log(list.fold(list.reverse(lazy), entry, fn(entry, add) { add(entry) }))
+    }
+  }
 }
+
+/// Whether a log at that level would be emitted. Mirrors the check done by the
+/// logger itself, so a deferred computation is never run for nothing.
+@external(erlang, "palabres_ffi", "allowed")
+@external(javascript, "./palabres.ffi.mjs", "isAllowed")
+fn is_allowed(level: level.Level) -> Bool
 
 @external(erlang, "palabres_ffi", "log")
 @external(javascript, "./palabres.ffi.mjs", "log")
@@ -489,7 +541,7 @@ fn do_log(
 /// never in tail position, because their result is used right after.
 fn init(level: level.Level, message: String) {
   let at = location.capture(level)
-  Log(level:, fields: [], message:, at:)
+  Log(level:, fields: [], message:, at:, lazy: [])
 }
 
 fn add_field(log: Log, value: Field) -> Log {

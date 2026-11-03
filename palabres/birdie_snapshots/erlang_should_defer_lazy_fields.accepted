@@ -1,0 +1,6 @@
+---
+version: 1.5.5
+title: erlang_should defer lazy fields
+---
+level=info at=palabres_test.lazy_messages eager_field=eager_value lazy_field1=lazy_value1 lazy_field2=2 lazy_field3=lazy_value3 nested_lazy_field=true Lazy message
+
