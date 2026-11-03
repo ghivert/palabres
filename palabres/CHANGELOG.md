@@ -1,3 +1,13 @@
+### Unreleased
+
+- Automatically add the `at` field to every log, pointing to the module and
+  the function creating the log. `palabres.at` is now only needed to override
+  the detected location. Deactivate it with `options.auto_at(False)`.
+- Fix JSON output on JavaScript with `gleam_stdlib` 1.0, and sort JSON keys to
+  get the same output on both targets.
+- Sort `PALABRES_*` environment variables to keep default fields in a
+  deterministic order.
+
 ### v1.0.4 - 2025-12-24
 
 - Adapt code to Gleam 1.13.0.

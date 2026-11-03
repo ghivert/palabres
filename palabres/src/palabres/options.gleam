@@ -49,8 +49,12 @@ import palabres/level
 ///   Allow to choose writing to `stdout` or a file.
 /// - [`style_default_logger`](#style_default_logger) Defaults to `True`. \
 ///   Apply the palabres styling to the default logger.
+/// - [`auto_at`](#auto_at) Defaults to `True`. \
+///   Automatically fill the `at` field with the module and function creating
+///   the log.
 pub opaque type Options {
   Options(
+    auto_at: Bool,
     color: Option(Bool),
     default_fields: field.Fields,
     json: Bool,
@@ -91,8 +95,10 @@ pub opaque type Output {
 /// - `level: level.Info`
 /// - `output: stdout`
 /// - `style_default_logger: True`
+/// - `auto_at: True`
 pub fn defaults() -> Options {
   Options(
+    auto_at: True,
     color: None,
     default_fields: [],
     json: False,
@@ -132,6 +138,16 @@ pub fn output(options: Options, to output: Output) -> Options {
 /// Has no effect on JavaScript, since there's no default logger.
 pub fn style_default_logger(options: Options, style_default: Bool) -> Options {
   Options(..options, style_default:)
+}
+
+/// Defaults to `True`. \
+/// Activate or deactivate the automatic `at` field. When activated, every log
+/// is tagged with the module and the function it has been created in, unless
+/// [`palabres.at`](./palabres.html#at) overrides it. \
+/// Locating a log requires inspecting the call stack, which is cheap but not
+/// free. Deactivate it on hot paths if every microsecond matters.
+pub fn auto_at(options: Options, enabled: Bool) -> Options {
+  Options(..options, auto_at: enabled)
 }
 
 /// Creates the stdout output.
