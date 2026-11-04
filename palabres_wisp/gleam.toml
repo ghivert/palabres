@@ -1,5 +1,5 @@
 name = "palabres_wisp"
-version = "1.0.2"
+version = "2.0.0"
 target = "erlang"
 gleam = ">= 1.13.0"
 
