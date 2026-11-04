@@ -1,3 +1,7 @@
+import exception
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
+import gleam/erlang/atom
 import gleam/http
 import gleam/int
 import gleam/string
@@ -44,6 +48,61 @@ pub fn log_request(
     }
   }
   response
+}
+
+/// Provides a middleware to rescue crashes, and returns a response with
+/// status code 500: Internal Server Error. Replaces `wisp.rescue_crashes`, and
+/// logs the crash as a structured `error` log, with the kind of crash in the
+/// `class` field (`error`, `throw` or `exit`). Gleam panics and failed
+/// `let assert` get `message`, `module`, `function` and `line` fields, while
+/// any other crash gets its inspected reason in the `reason` field.
+///
+/// ```gleam
+/// pub fn router(req: wisp.Request, ctx: context) -> wisp.Response {
+///   use <- palabres_wisp.log_request(req, options.defaults())
+///   use <- palabres_wisp.rescue_crashes
+///   route_request(req)
+/// }
+/// ```
+pub fn rescue_crashes(handler: fn() -> Response) -> Response {
+  case exception.rescue(handler) {
+    Ok(response) -> response
+    Error(error) -> {
+      let #(class, detail) = case error {
+        exception.Errored(detail) -> #("error", detail)
+        exception.Thrown(detail) -> #("throw", detail)
+        exception.Exited(detail) -> #("exit", detail)
+      }
+      palabres.error("Request handler crashed")
+      |> palabres.at(module: "palabres_wisp", function: "rescue_crashes")
+      |> palabres.string("class", class)
+      |> crash_fields(detail)
+      |> palabres.log
+      wisp.internal_server_error()
+    }
+  }
+}
+
+/// Gleam panics are raised as maps with atom keys, holding the message and
+/// the location of the crash. Extract them when present, and fall back on
+/// the inspected reason for any other crash.
+fn crash_fields(log: Log, detail: Dynamic) -> Log {
+  let decoder = {
+    use message <- decode.field(atom.create("message"), decode.string)
+    use module <- decode.field(atom.create("module"), decode.string)
+    use function <- decode.field(atom.create("function"), decode.string)
+    use line <- decode.field(atom.create("line"), decode.int)
+    decode.success(#(message, module, function, line))
+  }
+  case decode.run(detail, decoder) {
+    Error(_) -> palabres.string(log, "reason", string.inspect(detail))
+    Ok(#(message, module, function, line)) ->
+      log
+      |> palabres.string("message", message)
+      |> palabres.string("module", module)
+      |> palabres.string("function", function)
+      |> palabres.int("line", line)
+  }
 }
 
 fn request_log(status: Int) -> Log {

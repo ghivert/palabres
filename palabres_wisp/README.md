@@ -34,6 +34,7 @@ pub fn configure_logger() {
 
 pub fn handle_request(request: Request) -> Response {
   use <- palabres_wisp.log_request(request, wisp_options.defaults())
+  use <- palabres_wisp.rescue_crashes
   wisp.ok()
 }
 ```
@@ -56,6 +57,10 @@ let log_options =
   |> wisp_options.filter(fn(req, response) { response.status != 304 })
 use <- palabres_wisp.log_request(request, log_options)
 ```
+
+`rescue_crashes` replaces `wisp.rescue_crashes`: it returns a 500 response and
+logs the crash as a structured `error` log, with its class, reason, and the
+location of the crash for Gleam panics.
 
 And you're good to go! Explore the possibilities you got with Palabres on
 [Hexdocs](https://hexdocs.pm/palabres/palabres.html).

@@ -10,6 +10,7 @@
 - `log_request` now takes options, built with `palabres_wisp/options`:
   `except` skips the log for some paths, like health checks, and `filter`
   lets you decide from the request and its response.
+- Add `rescue_crashes`, a structured replacement for `wisp.rescue_crashes`.
 
 ### v1.0.2 - 2025-12-24
 

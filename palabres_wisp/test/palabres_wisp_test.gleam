@@ -113,6 +113,24 @@ pub fn log_request_filter_test() {
   assert dict.get(log, "status") == Ok(dynamic.int(200))
 }
 
+pub fn rescue_crashes_test() {
+  use logs <- with_logs
+  let response = {
+    use <- palabres_wisp.rescue_crashes
+    panic as "Boom"
+  }
+  assert response.status == 500
+  let assert [log] = logs()
+  assert dict.get(log, "level") == Ok(dynamic.string("error"))
+  assert dict.get(log, "at")
+    == Ok(dynamic.string("palabres_wisp.rescue_crashes"))
+  assert dict.get(log, "class") == Ok(dynamic.string("error"))
+  assert dict.get(log, "message") == Ok(dynamic.string("Boom"))
+  assert dict.get(log, "module") == Ok(dynamic.string("palabres_wisp_test"))
+  assert dict.get(log, "function") == Ok(dynamic.string("rescue_crashes_test"))
+  assert dict.get(log, "reason") == Error(Nil)
+}
+
 /// Configure Palabres to write JSON logs in a file, and hand the test a
 /// function reading the logs written so far, once the logger has flushed.
 fn with_logs(run: fn(fn() -> List(Dict(String, Dynamic))) -> Nil) -> Nil {
