@@ -34,6 +34,27 @@ pub fn log_request_test() {
   assert dict.get(log, "status") == Ok(dynamic.int(201))
   assert dict.get(log, "method") == Ok(dynamic.string("POST"))
   assert dict.get(log, "where") == Ok(dynamic.string("/users/1"))
+  let assert Ok(duration) = dict.get(log, "duration")
+  let assert Ok(duration) = decode.run(duration, decode.float)
+  assert duration >=. 0.0
+}
+
+pub fn log_request_levels_test() {
+  use logs <- with_logs
+  let request = simulate.request(http.Get, "/")
+  let _ = {
+    use <- palabres_wisp.log_request(request)
+    wisp.not_found()
+  }
+  let _ = {
+    use <- palabres_wisp.log_request(request)
+    wisp.internal_server_error()
+  }
+  let assert [not_found, crashed] = logs()
+  assert dict.get(not_found, "level") == Ok(dynamic.string("warning"))
+  assert dict.get(not_found, "status") == Ok(dynamic.int(404))
+  assert dict.get(crashed, "level") == Ok(dynamic.string("error"))
+  assert dict.get(crashed, "status") == Ok(dynamic.int(500))
 }
 
 /// Configure Palabres to write JSON logs in a file, and hand the test a
