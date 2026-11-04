@@ -31,6 +31,7 @@ pub fn log_request_test() {
   assert response.status == 201
   let assert [log] = logs()
   assert dict.get(log, "level") == Ok(dynamic.string("info"))
+  assert dict.get(log, "at") == Ok(dynamic.string("palabres_wisp.log_request"))
   assert dict.get(log, "status") == Ok(dynamic.int(201))
   assert dict.get(log, "method") == Ok(dynamic.string("POST"))
   assert dict.get(log, "where") == Ok(dynamic.string("/users/1"))

@@ -6,6 +6,7 @@
 - `log_request` now logs the duration of the request in milliseconds in `duration`, and
   picks its level from the response status: `error` for 5xx, `warning` for
   4xx, `info` otherwise.
+- `log_request` sets an explicit `at=palabres_wisp.log_request`.
 
 ### v1.0.2 - 2025-12-24
 

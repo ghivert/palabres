@@ -42,7 +42,7 @@ level depending on the response status: `error` for 5xx, `warning` for 4xx,
 `info` otherwise.
 
 ```
-level=info when=2026-11-03T15:38:19Z status=200 method=GET where=/users duration=0.312
+level=info at=palabres_wisp.log_request when=2026-11-03T15:38:19Z status=200 method=GET where=/users duration=0.312
 ```
 
 And you're good to go! Explore the possibilities you got with Palabres on

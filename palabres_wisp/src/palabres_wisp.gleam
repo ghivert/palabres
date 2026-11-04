@@ -16,7 +16,7 @@ import wisp.{type Request, type Response}
 ///   use <- palabres_wisp.log_request(req)
 ///   route_request(req)
 /// }
-/// // level=info when=2024-12-15T15:59:17Z
+/// // level=info at=palabres_wisp.log_request when=2024-12-15T15:59:17Z
 /// //   status=200 method=GET where=/users duration=1.234
 /// ```
 pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
@@ -25,6 +25,7 @@ pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
   let duration = int.to_float(monotonic_time() - start) /. 1000.0
   let method = string.uppercase(http.method_to_string(req.method))
   request_log(response.status)
+  |> palabres.at(module: "palabres_wisp", function: "log_request")
   |> palabres.int("status", response.status)
   |> palabres.string("method", method)
   |> palabres.string("where", req.path)
