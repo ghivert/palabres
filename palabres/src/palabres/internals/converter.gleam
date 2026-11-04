@@ -36,7 +36,10 @@ pub fn to_json(
     case values {
       [value] -> field.to_dynamic(value)
       values -> {
+        // Values are stored newest first: reverse them to get the order they
+        // were added in, like the query string output does.
         values
+        |> list.reverse
         |> list.map(field.to_dynamic)
         |> dynamic.list
       }

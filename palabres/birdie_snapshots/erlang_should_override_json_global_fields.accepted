@@ -1,0 +1,6 @@
+---
+version: 1.5.5
+title: erlang_should override JSON global fields
+---
+{"__message":"Overriding testing message","at":"palabres_test.messages","global_field1":"from_log","global_field2":"from_global","level":"info"}
+

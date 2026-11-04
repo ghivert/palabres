@@ -2,6 +2,7 @@
 ////
 //// ```gleam
 //// import palabres
+//// import palabres/field
 //// import palabres/level
 //// import palabres/options
 ////
@@ -20,6 +21,8 @@
 ////   })
 ////   // Applies or not palabres styling to default logger (on stdout).
 ////   |> options.style_default_logger(True)
+////   // Add fields to every log.
+////   |> options.fields([field.string("service", "my_service")])
 ////   // Configure the logger.
 ////   |> palabres.configure
 //// }
@@ -27,7 +30,7 @@
 
 import gleam/list
 import gleam/option.{type Option, None, Some}
-import palabres/internals/field
+import palabres/field.{type Field}
 import palabres/level
 
 /// Options to configure the logger. To create with [`defaults`](#defaults).
@@ -54,12 +57,14 @@ import palabres/level
 ///   the log.
 /// - [`auto_when`](#auto_when) Defaults to `True`. \
 ///   Automatically fill the `when` field with the timestamp of the log.
+/// - [`fields`](#fields) Defaults to `[]`. \
+///   Fields added to every log.
 pub opaque type Options {
   Options(
     auto_at: Bool,
     auto_when: Bool,
     color: Option(Bool),
-    default_fields: field.Fields,
+    fields: List(Field),
     json: Bool,
     level: level.Level,
     output: Output,
@@ -100,12 +105,13 @@ pub opaque type Output {
 /// - `style_default_logger: True`
 /// - `auto_at: True`
 /// - `auto_when: True`
+/// - `fields: []`
 pub fn defaults() -> Options {
   Options(
     auto_at: True,
     auto_when: True,
     color: None,
-    default_fields: [],
+    fields: [],
     json: False,
     level: level.Info,
     output: Stdout,
@@ -188,180 +194,22 @@ pub fn flush(file: Output, every interval: Int) -> Output {
   }
 }
 
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default string value in your structured data.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_string("service", "my_service")
-/// ```
-@internal
-pub fn default_string(options: Options, key: String, value: String) -> Options {
-  let value = field.string(value)
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default float value in your structured data.
+/// Defaults to `[]`. \
+/// Add fields to every log, whether it is created by Palabres or, on Erlang,
+/// by any other library logging through `logger`. Use it for what is true for
+/// the whole process: service name, version, hostname, environment… \
+/// Fields are built with the [`palabres/field`](./palabres/field.html) module.
+/// A field set on a log takes precedence over a global field with the same
+/// key. Calling `fields` several times accumulates the fields.
 ///
 /// ```gleam
 /// options.defaults()
-/// |> options.default_float(rate, 0.2)
+/// |> options.fields([
+///   field.string("service", "my_service"),
+///   field.int("version", 3),
+///   field.lazy(fn() { field.string("hostname", read_hostname()) }),
+/// ])
 /// ```
-@internal
-pub fn default_float(options: Options, key: String, value: Float) -> Options {
-  let value = field.float(value)
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default int value in your structured data.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_string(version, 1)
-/// ```
-@internal
-pub fn default_int(options: Options, key: String, value: Int) -> Options {
-  let value = field.int(value)
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default boolean value in your structured data.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_bool("activated", False)
-/// ```
-@internal
-pub fn default_bool(options: Options, key: String, value: Bool) -> Options {
-  let value = field.bool(value)
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default list of values in your structured data.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_list("services", ["my_service", "other_service"], options.default_string)
-/// ```
-@internal
-pub fn default_list(
-  options: Options,
-  key: String,
-  value: List(a),
-  add: fn(Options, String, a) -> Options,
-) -> Options {
-  let value = list.reverse(value)
-  use options, value <- list.fold(value, options)
-  add(options, key, value)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default string value in your structured data, computed only when the
-/// log is printed.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_lazy_string("service", fn() { "my_service" })
-/// ```
-@internal
-pub fn default_lazy_string(
-  options: Options,
-  key: String,
-  value: fn() -> String,
-) -> Options {
-  let value = field.lazy(fn() { field.string(value()) })
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default float value in your structured data, computed only when the
-/// log is printed.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_lazy_float(rate, fn() { 0.2 })
-/// ```
-@internal
-pub fn default_lazy_float(
-  options: Options,
-  key: String,
-  value: fn() -> Float,
-) -> Options {
-  let value = field.lazy(fn() { field.float(value()) })
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default int value in your structured data, computed only when the
-/// log is printed.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_lazy_string(version, fn() { 1 })
-/// ```
-@internal
-pub fn default_lazy_int(
-  options: Options,
-  key: String,
-  value: fn() -> Int,
-) -> Options {
-  let value = field.lazy(fn() { field.int(value()) })
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
-}
-
-/// > Congrats, you found a secret function! As every hidden, secret function,
-/// > it can be subject to changes at any time. Consider using this API as
-/// > unsafe.
-///
-/// Add a default boolean value in your structured data, computed only when the
-/// log is printed.
-///
-/// ```gleam
-/// options.defaults()
-/// |> options.default_bool("activated", fn() { False })
-/// ```
-@internal
-pub fn default_lazy_bool(
-  options: Options,
-  key: String,
-  value: fn() -> Bool,
-) -> Options {
-  let value = field.lazy(fn() { field.bool(value()) })
-  let default_fields = field.append(options.default_fields, key, value)
-  Options(..options, default_fields:)
+pub fn fields(options: Options, fields: List(Field)) -> Options {
+  Options(..options, fields: list.append(options.fields, fields))
 }

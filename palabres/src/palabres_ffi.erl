@@ -110,7 +110,7 @@ format_options(Color, Options) ->
   #{color => Color,
     json => Options#options.json,
     auto_when => Options#options.auto_when,
-    default_fields => Options#options.default_fields}.
+    fields => Options#options.fields}.
 
 % Filter events for the loggers. Behaves differently for Palabres and for the
 % default logger if default style has been overriden.
@@ -238,12 +238,12 @@ format_level(Level, #{color := Color}) ->
 % machine, or read by a human.
 format_msg(Report0, Meta, Options0) ->
   Options = Options0#{timestamp => format_time(Meta)},
-  % A lazy default field can itself log: the formatter then runs again, in
+  % A lazy global field can itself log: the formatter then runs again, in
   % the same process, while this log is being formatted. The nested log is
-  % formatted without default fields, otherwise the lazy field would be
+  % formatted without global fields, otherwise the lazy field would be
   % evaluated again, forever.
   case erlang:put(?FORMATTING_KEY, true) of
-    true -> do_format_msg(Report0, Meta, Options#{default_fields => []});
+    true -> do_format_msg(Report0, Meta, Options#{fields => []});
     undefined ->
       try do_format_msg(Report0, Meta, Options)
       after erlang:erase(?FORMATTING_KEY)
@@ -419,10 +419,13 @@ chardata_to_binary(Chardata) ->
 % `palabres` key. It is expected that no one will send a report with a
 % `palabres` key holding a 3-tuple.
 format_palabres_report(Fields, Msg, At, Options) ->
-  #{color := Color, json := Json, auto_when := AutoWhen, default_fields := DefaultFields} = Options,
+  #{color := Color, json := Json, auto_when := AutoWhen, fields := Globals} = Options,
   #{timestamp := When} = Options,
   Msg1 = palabres@internals@converter:format_message(Msg, Color),
-  Fields1 = lists:append(Fields, DefaultFields),
+  % Global fields are resolved on every log, as they can be lazy. A field set
+  % on the log wins over a global field with the same key.
+  Globals1 = palabres@field:resolve(Globals),
+  Fields1 = palabres@internals@field:merge(Fields, Globals1),
   Fields2 = prepend_when(Fields1, When, AutoWhen),
   Fields3 = palabres@internals@converter:prepend_at(Fields2, At, Color, Json),
   case Json of

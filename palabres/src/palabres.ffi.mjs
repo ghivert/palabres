@@ -1,6 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as $converter from './palabres/internals/converter.mjs'
+import * as $field from './palabres/field.mjs'
+import * as $internalField from './palabres/internals/field.mjs'
 import { Location } from './palabres/internals/location.mjs'
 import * as $dict from '../gleam_stdlib/gleam/dict.mjs'
 import * as $list from '../gleam_stdlib/gleam/list.mjs'
@@ -23,7 +25,7 @@ export function configure(options) {
     json: options.json,
     level: options.level,
     output: options.output,
-    defaultFields: options.default_fields,
+    fields: options.fields,
   })
 }
 
@@ -104,7 +106,7 @@ class Logger {
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
-    this.defaultFields = options.defaultFields
+    this.fields = options.fields
     this.formatting = false
     // A file output goes through a single stream, opened in append mode for
     // the whole life of the logger. The stream queues the lines and writes
@@ -116,8 +118,8 @@ class Logger {
 
   log(lvl, fields, message, at) {
     if ($converter.level_to_int(lvl) < this.level) return
-    // A lazy default field can itself log, which formats a new log while this
-    // one is being formatted. The nested log is formatted without default
+    // A lazy global field can itself log, which formats a new log while this
+    // one is being formatted. The nested log is formatted without global
     // fields, otherwise the lazy field would be evaluated again, forever.
     const nested = this.formatting
     this.formatting = true
@@ -150,7 +152,9 @@ class Logger {
   }
 
   #formatMessage(lvl, fields, message, at, nested) {
-    const f1 = nested ? fields : $list.append(fields, this.defaultFields)
+    // Global fields are resolved on every log, as they can be lazy. A field
+    // set on the log wins over a global field with the same key.
+    const f1 = nested ? fields : $internalField.merge(fields, $field.resolve(this.fields))
     const f2 = this.autoWhen ? $converter.prepend_when(f1, formatIso8601()) : f1
     const f3 = $converter.prepend_at(f2, at, this.#isColor, this.#isJson)
     if (this.#isJson) return this.#formatJSON(lvl, f3, message)
