@@ -7,6 +7,9 @@
   picks its level from the response status: `error` for 5xx, `warning` for
   4xx, `info` otherwise.
 - `log_request` sets an explicit `at=palabres_wisp.log_request`.
+- `log_request` now takes options, built with `palabres_wisp/options`:
+  `except` skips the log for some paths, like health checks, and `filter`
+  lets you decide from the request and its response.
 
 ### v1.0.2 - 2025-12-24
 

@@ -2,35 +2,47 @@ import gleam/http
 import gleam/int
 import gleam/string
 import palabres.{type Log}
+import palabres_wisp/options.{type Options}
 import wisp.{type Request, type Response}
 
 /// Provides a middleware to display every incoming request for a Wisp server.
 /// Use it in your router to log requests with their status code, method, path
 /// and duration in milliseconds. The log level depends on the response status:
-/// `error` for 5xx, `warning` for 4xx, `info` otherwise.
+/// `error` for 5xx, `warning` for 4xx, `info` otherwise. Requests can be kept
+/// out of the logs with [`options`](./palabres_wisp/options.html).
 ///
 /// ```gleam
 /// import palabres_wisp
+/// import palabres_wisp/options
 /// import wisp
 /// pub fn router(req: wisp.Request, ctx: context) -> wisp.Response {
-///   use <- palabres_wisp.log_request(req)
+///   use <- palabres_wisp.log_request(req, options.defaults())
 ///   route_request(req)
 /// }
 /// // level=info at=palabres_wisp.log_request when=2024-12-15T15:59:17Z
 /// //   status=200 method=GET where=/users duration=1.234
 /// ```
-pub fn log_request(req: Request, handler: fn() -> Response) -> Response {
+pub fn log_request(
+  req: Request,
+  options: Options,
+  handler: fn() -> Response,
+) -> Response {
   let start = monotonic_time()
   let response = handler()
-  let duration = int.to_float(monotonic_time() - start) /. 1000.0
-  let method = string.uppercase(http.method_to_string(req.method))
-  request_log(response.status)
-  |> palabres.at(module: "palabres_wisp", function: "log_request")
-  |> palabres.int("status", response.status)
-  |> palabres.string("method", method)
-  |> palabres.string("where", req.path)
-  |> palabres.float("duration", duration)
-  |> palabres.log
+  case options.should_log(options, req, response) {
+    False -> Nil
+    True -> {
+      let duration = int.to_float(monotonic_time() - start) /. 1000.0
+      let method = string.uppercase(http.method_to_string(req.method))
+      request_log(response.status)
+      |> palabres.at(module: "palabres_wisp", function: "log_request")
+      |> palabres.int("status", response.status)
+      |> palabres.string("method", method)
+      |> palabres.string("where", req.path)
+      |> palabres.float("duration", duration)
+      |> palabres.log
+    }
+  }
   response
 }
 

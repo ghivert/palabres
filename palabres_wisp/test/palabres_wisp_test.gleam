@@ -8,8 +8,9 @@ import gleam/list
 import gleam/string
 import gleeunit
 import palabres
-import palabres/options
+import palabres/options as palabres_options
 import palabres_wisp
+import palabres_wisp/options
 import simplifile
 import wisp
 import wisp/simulate
@@ -24,7 +25,7 @@ pub fn log_request_test() {
   use logs <- with_logs
   let request = simulate.request(http.Post, "/users/1")
   let response = {
-    use <- palabres_wisp.log_request(request)
+    use <- palabres_wisp.log_request(request, options.defaults())
     wisp.response(201)
   }
   // The handler response is returned untouched.
@@ -44,11 +45,11 @@ pub fn log_request_levels_test() {
   use logs <- with_logs
   let request = simulate.request(http.Get, "/")
   let _ = {
-    use <- palabres_wisp.log_request(request)
+    use <- palabres_wisp.log_request(request, options.defaults())
     wisp.not_found()
   }
   let _ = {
-    use <- palabres_wisp.log_request(request)
+    use <- palabres_wisp.log_request(request, options.defaults())
     wisp.internal_server_error()
   }
   let assert [not_found, crashed] = logs()
@@ -58,13 +59,70 @@ pub fn log_request_levels_test() {
   assert dict.get(crashed, "status") == Ok(dynamic.int(500))
 }
 
+pub fn log_request_except_test() {
+  use logs <- with_logs
+  let log_options = options.defaults() |> options.except(["/health"])
+  let _ = {
+    use <- palabres_wisp.log_request(
+      simulate.request(http.Get, "/health"),
+      log_options,
+    )
+    wisp.ok()
+  }
+  let _ = {
+    use <- palabres_wisp.log_request(
+      simulate.request(http.Get, "/users"),
+      log_options,
+    )
+    wisp.ok()
+  }
+  let assert [log] = logs()
+  assert dict.get(log, "where") == Ok(dynamic.string("/users"))
+}
+
+pub fn log_request_filter_test() {
+  use logs <- with_logs
+  let log_options =
+    options.defaults()
+    |> options.filter(fn(req, response) {
+      req.method != http.Head && response.status != 304
+    })
+  let _ = {
+    use <- palabres_wisp.log_request(
+      simulate.request(http.Head, "/users"),
+      log_options,
+    )
+    wisp.ok()
+  }
+  let _ = {
+    use <- palabres_wisp.log_request(
+      simulate.request(http.Get, "/users"),
+      log_options,
+    )
+    wisp.response(304)
+  }
+  let _ = {
+    use <- palabres_wisp.log_request(
+      simulate.request(http.Get, "/users"),
+      log_options,
+    )
+    wisp.ok()
+  }
+  let assert [log] = logs()
+  assert dict.get(log, "method") == Ok(dynamic.string("GET"))
+  assert dict.get(log, "status") == Ok(dynamic.int(200))
+}
+
 /// Configure Palabres to write JSON logs in a file, and hand the test a
 /// function reading the logs written so far, once the logger has flushed.
 fn with_logs(run: fn(fn() -> List(Dict(String, Dynamic))) -> Nil) -> Nil {
   let _ = simplifile.delete(log_file)
-  options.defaults()
-  |> options.json(True)
-  |> options.output(to: options.file(log_file) |> options.flush(every: 10))
+  palabres_options.defaults()
+  |> palabres_options.json(True)
+  |> palabres_options.output(to: {
+    palabres_options.file(log_file)
+    |> palabres_options.flush(every: 10)
+  })
   |> palabres.configure
   run(fn() {
     process.sleep(50)

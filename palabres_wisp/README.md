@@ -21,6 +21,7 @@ import palabres
 import palabres/options
 import palabres/level
 import palabres_wisp
+import palabres_wisp/options as wisp_options
 import wisp
 
 pub fn configure_logger() {
@@ -32,7 +33,7 @@ pub fn configure_logger() {
 }
 
 pub fn handle_request(request: Request) -> Response {
-  use <- palabres_wisp.log_request(request)
+  use <- palabres_wisp.log_request(request, wisp_options.defaults())
   wisp.ok()
 }
 ```
@@ -43,6 +44,17 @@ level depending on the response status: `error` for 5xx, `warning` for 4xx,
 
 ```
 level=info at=palabres_wisp.log_request when=2026-11-03T15:38:19Z status=200 method=GET where=/users duration=0.312
+```
+
+Health checks and other noisy endpoints can be kept out of the logs with
+`except`, and `filter` lets you decide from the request and its response:
+
+```gleam
+let log_options =
+  wisp_options.defaults()
+  |> wisp_options.except(["/health"])
+  |> wisp_options.filter(fn(req, response) { response.status != 304 })
+use <- palabres_wisp.log_request(request, log_options)
 ```
 
 And you're good to go! Explore the possibilities you got with Palabres on
