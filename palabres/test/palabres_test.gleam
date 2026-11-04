@@ -54,6 +54,7 @@ fn example_messages() {
   |> palabres.float("test_field3", 1.0)
   |> palabres.nullable("test_field4", option.None, palabres.string)
   |> palabres.nullable("test_field5", option.Some(1), palabres.int)
+  |> palabres.list("test_field6", [1, 2], palabres.int)
   |> palabres.log
 }
 

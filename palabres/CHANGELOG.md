@@ -10,6 +10,9 @@
   for log collectors adding their own timestamp.
 - Fix JSON output on JavaScript with `gleam_stdlib` 1.0, and sort JSON keys to
   get the same output on both targets.
+- Fix the order of multi-valued fields: JSON output listed values newest
+  first, and `palabres.list` printed them reversed in string output. Both
+  outputs now follow the order values were added in.
 - Add `options.fields` and the public `palabres/field` module to attach
   fields to every log. It replaces the hidden `options.default_*` and
   `options.default_lazy_*` functions: build fields with `field.string`,

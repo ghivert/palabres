@@ -106,6 +106,7 @@ pub fn nullable(
 ///
 /// ```gleam
 /// field.list("services", ["my_service", "other_service"], field.string)
+/// // Turns in: services=my_service,other_service
 /// ```
 pub fn list(key: String, value: List(a), add: fn(String, a) -> Field) -> Field {
   let values = list.flat_map(value, fn(value) { force(add(key, value)) })
@@ -151,8 +152,8 @@ pub fn add(fields: internal.Fields, field: Field) -> internal.Fields {
   case field {
     Lazy(field) -> add(fields, field())
     Field(key:, values:) -> {
-      // Values are stored newest first, like `palabres.list` does.
-      use fields, value <- list.fold(list.reverse(values), fields)
+      // Values are stored newest first, like `palabres.string` and friends do.
+      use fields, value <- list.fold(values, fields)
       internal.append(fields, key, value)
     }
   }

@@ -470,7 +470,6 @@ pub fn list(
   value: List(a),
   add: fn(Log, String, a) -> Log,
 ) -> Log {
-  let value = list.reverse(value)
   use log, value <- list.fold(value, log)
   add(log, key, value)
 }

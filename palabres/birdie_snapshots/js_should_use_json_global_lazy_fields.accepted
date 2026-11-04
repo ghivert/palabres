@@ -2,6 +2,6 @@
 version: 1.5.5
 title: js_should use JSON global lazy fields
 ---
-{"__message":"Debug testing message","at":"palabres_test.messages","global_lazy_field1":["lazy-example3","lazy-example1"],"global_lazy_field2":"lazy-example2","level":"debug","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
-{"__message":"Info testing message","at":"palabres_test.messages","global_lazy_field1":["lazy-example3","lazy-example1"],"global_lazy_field2":"lazy-example2","level":"info","test_field1":["test_value2","test_value1"],"test_field2":"test_value1"}
-{"__message":"Alert testing message","at":"palabres_test.messages","global_lazy_field1":["lazy-example3","lazy-example1"],"global_lazy_field2":"lazy-example2","level":"alert","test_field1":"test_value1","test_field2":1,"test_field3":1,"test_field4":null,"test_field5":1}
+{"__message":"Debug testing message","at":"palabres_test.messages","global_lazy_field1":["lazy-example1","lazy-example3"],"global_lazy_field2":"lazy-example2","level":"debug","test_field1":["test_value1","test_value2"],"test_field2":"test_value1"}
+{"__message":"Info testing message","at":"palabres_test.messages","global_lazy_field1":["lazy-example1","lazy-example3"],"global_lazy_field2":"lazy-example2","level":"info","test_field1":["test_value1","test_value2"],"test_field2":"test_value1"}
+{"__message":"Alert testing message","at":"palabres_test.messages","global_lazy_field1":["lazy-example1","lazy-example3"],"global_lazy_field2":"lazy-example2","level":"alert","test_field1":"test_value1","test_field2":1,"test_field3":1,"test_field4":null,"test_field5":1,"test_field6":[1,2]}
