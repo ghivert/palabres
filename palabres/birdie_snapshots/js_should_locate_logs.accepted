@@ -6,3 +6,4 @@ title: js_should locate logs
 [32mlevel[31m=[1;32mntce[0m [32mat[33m=[0m[35mpalabres_test[0m [1mLocated from anonymous function[0m
 [32mlevel[31m=[1;33mwarn[0m [32mat[33m=[0m[35mpalabres_test[0m.[34mlocated_messages[0m [1mLocated one-liner[0m
 [32mlevel[31m=[1;34minfo[0m [32mat[33m=[0m[35mmy_module[0m.[34mmy_function[0m [1mExplicit location[0m
+

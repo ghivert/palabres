@@ -6,3 +6,4 @@ level=info test_field1=test_value1 Located message
 level=ntce Located from anonymous function
 level=warn Located one-liner
 level=info at=my_module.my_function Explicit location
+

@@ -1,5 +1,6 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import * as $converter from './palabres/internals/converter.mjs'
-import * as levels from './palabres/level.ffi.mjs'
 import { Location } from './palabres/internals/location.mjs'
 import * as $dict from '../gleam_stdlib/gleam/dict.mjs'
 import * as $list from '../gleam_stdlib/gleam/list.mjs'
@@ -7,11 +8,14 @@ import { Some, None } from '../gleam_stdlib/gleam/option.mjs'
 
 let logger = null
 
-export function formatIso8601() {
+function formatIso8601() {
   return new Date().toISOString()
 }
 
 export function configure(options) {
+  // When `configure` is called a second time, the previous logger must
+  // release its file before being replaced.
+  logger?.destroy()
   logger = new Logger({
     autoAt: options.auto_at,
     autoWhen: options.auto_when,
@@ -40,7 +44,7 @@ const PALABRES_FRAMES = 3
 // avoids formatting and parsing the stack string, and is unaffected by source
 // maps. Supported on Node, Deno and Bun. Anything else gets no location.
 export function locate(level) {
-  if (!logger?.autoAt || levels.asInt(level) < logger.level) return new None()
+  if (!logger?.autoAt || $converter.level_to_int(level) < logger.level) return new None()
   const { prepareStackTrace, stackTraceLimit } = Error
   Error.stackTraceLimit = PALABRES_FRAMES + 1
   Error.prepareStackTrace = (_, callSites) => callSites
@@ -84,7 +88,7 @@ export function log(lvl, fields, message, at) {
 // Whether a log at that level would be printed. Without a configured logger,
 // nothing is printed, so nothing deferred is worth computing.
 export function isAllowed(lvl) {
-  return logger !== null && levels.asInt(lvl) >= logger.level
+  return logger !== null && $converter.level_to_int(lvl) >= logger.level
 }
 
 export function destroy() {
@@ -94,41 +98,67 @@ export function destroy() {
 
 class Logger {
   constructor(options) {
-    this.buffer = []
     this.autoAt = options.autoAt
     this.autoWhen = options.autoWhen
-    this.level = levels.asInt(options.level)
+    this.level = $converter.level_to_int(options.level)
     this.color = options.color[0] ?? this.#readColor()
     this.json = options.json
     this.output = options.output
     this.defaultFields = options.defaultFields
-    if (this.output.flush_interval) {
-      const timer = this.output.flush_interval[0]
-      if (timer) this.interval = setInterval(() => this.#flush(), timer)
-    }
+    this.formatting = false
+    // A file output goes through a single stream, opened in append mode for
+    // the whole life of the logger. The stream queues the lines and writes
+    // them as fast as the file accepts them, and pending writes keep the
+    // process alive until they are done, so nothing is lost at exit.
+    // `flush_interval` has thus no effect on JavaScript.
+    if (this.output.filename) this.stream = this.#openStream(this.output.filename)
   }
 
   log(lvl, fields, message, at) {
-    if (levels.asInt(lvl) < this.level) return
-    const msg = this.#formatMessage(lvl, fields, message, at)
-    if (this.output.filename) return this.buffer.push(msg)
-    else console.log(msg)
+    if ($converter.level_to_int(lvl) < this.level) return
+    // A lazy default field can itself log, which formats a new log while this
+    // one is being formatted. The nested log is formatted without default
+    // fields, otherwise the lazy field would be evaluated again, forever.
+    const nested = this.formatting
+    this.formatting = true
+    try {
+      const msg = this.#formatMessage(lvl, fields, message, at, nested)
+      if (this.stream) this.stream.write(msg + '\n')
+      else console.log(msg)
+    } finally {
+      this.formatting = nested
+    }
   }
 
   destroy() {
-    clearInterval(this.interval)
-    this.#flush()
+    this.stream?.end()
+    this.stream = null
   }
 
-  #formatMessage(lvl, fields, message, at) {
-    const f1 = $list.append(fields, this.defaultFields)
+  #openStream(filename) {
+    fs.mkdirSync(path.dirname(filename), { recursive: true })
+    const stream = fs.createWriteStream(filename, { flags: 'a' })
+    // An unwritable file must not crash the application: it is reported
+    // once on stderr, and the logs are dropped.
+    let reported = false
+    stream.on('error', error => {
+      if (reported) return
+      reported = true
+      console.error(`palabres: unable to write logs in ${filename}: ${error.message}`)
+    })
+    return stream
+  }
+
+  #formatMessage(lvl, fields, message, at, nested) {
+    const f1 = nested ? fields : $list.append(fields, this.defaultFields)
     const f2 = this.autoWhen ? $converter.prepend_when(f1, formatIso8601()) : f1
     const f3 = $converter.prepend_at(f2, at, this.#isColor, this.#isJson)
     if (this.#isJson) return this.#formatJSON(lvl, f3, message)
     const msg = $converter.format_message(message, this.#isColor)
     const f4 = $converter.to_spaced_query_string(f3, this.#isColor)
     // Both the fields and the message can be empty: skip them.
-    return [levels.format(lvl, this.color), f4, msg].filter(Boolean).join(' ')
+    const level = $converter.format_level(lvl, this.color)
+    return [level, f4, msg].filter(Boolean).join(' ')
   }
 
   #formatJSON(lvl, fields, message) {
@@ -139,7 +169,8 @@ class Logger {
       .map(([key, value]) => [key, value?.toArray?.() ?? value ?? null])
       // Keys are sorted to get a deterministic output, consistent with Erlang.
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    const data_ = { ...Object.fromEntries(data), level: levels.rawFormat(lvl) }
+    const level = $converter.level_to_string(lvl)
+    const data_ = { ...Object.fromEntries(data), level }
     return JSON.stringify(data_)
   }
 
@@ -153,19 +184,10 @@ class Logger {
     return !isJson && isColored
   }
 
+  // Follow the NO_COLOR convention (https://no-color.org): colour is
+  // deactivated when the variable is defined with any non-empty value.
   #readColor() {
-    const noColor = process.env.NO_COLOUR || process.env.NO_COLOR
-    return noColor === undefined
-  }
-
-  async #flush() {
-    const filename = this.output.filename
-    const fs = await import('node:fs')
-    const path = await import('node:path')
-    const dirname = path.dirname(filename)
-    await fs.promises.mkdir(dirname, { recursive: true })
-    const message = this.buffer.join('\n')
-    this.buffer = []
-    await fs.promises.appendFile(filename, message)
+    const flags = [process.env.NO_COLOUR, process.env.NO_COLOR]
+    return !flags.some(flag => flag !== undefined && flag !== '')
   }
 }
