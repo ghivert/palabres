@@ -4,12 +4,14 @@
 
 import gleam/bool
 import gleam/dict
-import gleam/dynamic
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
 import palabres/internals/field.{type Field, type Fields}
 import palabres/internals/location.{type Location}
+import palabres/level.{type Level}
 
 /// Converts a list of fields, to a query string separated by spaces instead
 /// of ampersand (`&`). Handles coloring output, or not, depending on the state
@@ -103,6 +105,86 @@ fn format_location(location: Location, is_color: Bool, is_json: Bool) -> Field {
 }
 
 pub fn format_message(message: String, is_color: Bool) -> String {
-  use <- bool.guard(when: !is_color, return: message)
+  use <- bool.guard(when: !is_color || message == "", return: message)
   "\u{1b}[1m" <> message <> "\u{1b}[0m"
+}
+
+/// Convert a report coming from the outside world, like an Erlang `logger`
+/// report, to fields. Values are typed when they are primitives, to be
+/// rendered as proper strings and numbers in JSON, and are inspected
+/// otherwise.
+pub fn from_report(report: List(#(String, Dynamic))) -> Fields {
+  use #(key, value) <- list.map(report)
+  #(key, [report_field(value)])
+}
+
+fn report_field(value: Dynamic) -> Field {
+  let decoder =
+    decode.one_of(decode.map(decode.int, field.int), or: [
+      decode.map(decode.float, field.float),
+      decode.map(decode.bool, field.bool),
+      decode.map(decode.string, field.string),
+    ])
+  case decode.run(value, decoder) {
+    Ok(field) -> field
+    Error(_) -> field.string(string.inspect(value))
+  }
+}
+
+/// Severity of a level as an integer, to compare levels: `Emergency` is the
+/// highest, `Debug` the lowest.
+pub fn level_to_int(level: Level) -> Int {
+  case level {
+    level.Emergency -> 7
+    level.Alert -> 6
+    level.Critical -> 5
+    level.Error -> 4
+    level.Warning -> 3
+    level.Notice -> 2
+    level.Info -> 1
+    level.Debug -> 0
+  }
+}
+
+/// Name of a level, as displayed in the `level` field of JSON logs.
+pub fn level_to_string(level: Level) -> String {
+  case level {
+    level.Emergency -> "emergency"
+    level.Alert -> "alert"
+    level.Critical -> "critical"
+    level.Error -> "error"
+    level.Warning -> "warning"
+    level.Notice -> "notice"
+    level.Info -> "info"
+    level.Debug -> "debug"
+  }
+}
+
+/// Format the level indicator of text logs, `level=info`, with an appropriate
+/// colour when colour is activated: red for errors and above, yellow for
+/// warnings, green for notices, blue for info and cyan for debug. Every
+/// combination is spelled out as a literal on purpose: the indicator is built
+/// on every log, and a literal costs no allocation on either target, where a
+/// concatenation would.
+pub fn format_level(level: Level, colored: Bool) -> String {
+  case level, colored {
+    level.Emergency, True ->
+      "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;31memrg\u{1b}[0m"
+    level.Alert, True -> "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;31malrt\u{1b}[0m"
+    level.Critical, True ->
+      "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;31mcrit\u{1b}[0m"
+    level.Error, True -> "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;31meror\u{1b}[0m"
+    level.Warning, True -> "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;33mwarn\u{1b}[0m"
+    level.Notice, True -> "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;32mntce\u{1b}[0m"
+    level.Info, True -> "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;34minfo\u{1b}[0m"
+    level.Debug, True -> "\u{1b}[32mlevel\u{1b}[31m=\u{1b}[1;36mdebg\u{1b}[0m"
+    level.Emergency, False -> "level=emrg"
+    level.Alert, False -> "level=alrt"
+    level.Critical, False -> "level=crit"
+    level.Error, False -> "level=eror"
+    level.Warning, False -> "level=warn"
+    level.Notice, False -> "level=ntce"
+    level.Info, False -> "level=info"
+    level.Debug, False -> "level=debg"
+  }
 }

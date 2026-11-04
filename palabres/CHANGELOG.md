@@ -10,6 +10,33 @@
   for log collectors adding their own timestamp.
 - Fix JSON output on JavaScript with `gleam_stdlib` 1.0, and sort JSON keys to
   get the same output on both targets.
+- Format `{Format, Args}` messages sent to `logger` on Erlang, like
+  `logger:info("user ~p", [Id])`, with `io_lib:format/2` instead of inspecting
+  them.
+- Display reports sent to `logger` on Erlang as fields, like `user=42`, typed in
+  JSON instead of serialised as arrays of integers, with charlists as strings.
+  OTP crash reports are rendered through their `report_cb`, as OTP does, and
+  plain `{string, Charlist}` messages are proper JSON strings.
+- Decorate plain `logger` messages like Palabres logs on Erlang: their global
+  fields are scalars in JSON, like on Palabres logs, instead of arrays.
+- Use the timestamp of the event for `when` on Erlang, with millisecond
+  precision like JavaScript, instead of the formatting time in seconds.
+- Send Palabres logs as a valid `logger` report on Erlang, `#{palabres =>
+  {Fields, Message, At}}`, so that third-party handlers can receive them.
+- Install a single primary `logger` filter on Erlang, under the id
+  `palabres_domain`, instead of two conflicting `domain` filters.
+- Follow the `NO_COLOR` convention on both targets: any non-empty value disables
+  colour, including `false`; an empty value keeps it.
+- Reconfigure the handler when `palabres.configure` is called a second time on
+  Erlang, instead of silently keeping the first configuration.
+- Fix the file output on JavaScript: logs go through a single stream, so each
+  log ends up on its own line, and a file output without `options.flush` writes
+  too. `options.flush` has no effect on JavaScript, where logs are written as
+  they come. Every log now ends with a newline, as on Erlang, which is the only
+  change in the JavaScript snapshots.
+- Fix an infinite recursion when a lazy global field itself logs, on both
+  targets: the nested log is written without global fields.
+- Share the level formatting between the Erlang and JavaScript loggers.
 - Fix the order of multi-valued fields: JSON output listed values newest
   first, and `palabres.list` printed them reversed in string output. Both
   outputs now follow the order values were added in.

@@ -3,3 +3,4 @@ version: 1.5.5
 title: js_should override global fields
 ---
 level=info at=palabres_test.messages global_field1=from_log global_field2=from_global Overriding testing message
+

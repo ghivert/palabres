@@ -181,10 +181,12 @@ pub fn file(filename: String) -> Output {
   File(filename:, flush_interval: None)
 }
 
-/// When outputting to a file, logger will dump messages in file every 5 seconds
-/// by defaults. `flush` allows to choose how long to wait before dumping
-/// messages in the file. Be careful, setting a too small interval could lead to
-/// performance issues, because BEAM will spend too much time in file writing.
+/// When outputting to a file on Erlang, logger will sync the file every 5
+/// seconds by default. `flush` allows to choose how long to wait between two
+/// syncs. Be careful, setting a too small interval could lead to performance
+/// issues, because BEAM will spend too much time in file writing. \
+/// Has no effect on JavaScript, where logs are written to the file as they
+/// come, through a single stream kept open by the logger.
 pub fn flush(file: Output, every interval: Int) -> Output {
   case file {
     File(..) -> File(..file, flush_interval: Some(interval))

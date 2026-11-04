@@ -379,3 +379,86 @@ pub fn should_not_add_timestamp_when_disabled_test() {
   use content <- run_when(False)
   assert string.starts_with(content, "level=info Timestamp testing message")
 }
+
+/// Bare file output: no colour, no location, no timestamp, to check the raw
+/// content of the file.
+fn configure_file(json json: Bool, flush flush: option.Option(Int)) -> Nil {
+  options.defaults()
+  |> options.color(False)
+  |> options.auto_at(False)
+  |> options.auto_when(False)
+  |> options.json(json)
+  |> options.output(to: {
+    let file = options.file(test_utils.log_file())
+    case flush {
+      option.Some(interval) -> options.flush(file, every: interval)
+      option.None -> file
+    }
+  })
+  |> palabres.configure
+}
+
+fn read_file_logs(next: fn(String) -> Nil) -> Nil {
+  use <- test_utils.sleep(100)
+  let content = test_utils.read_raw_logs()
+  test_utils.destroy_logger()
+  test_utils.remove_logs()
+  next(content)
+}
+
+/// Configuring the logger a second time, without destroying it, must apply
+/// the new configuration: here, switching from text to JSON.
+pub fn should_reconfigure_logger_test() {
+  configure_file(json: False, flush: option.Some(10))
+  configure_file(json: True, flush: option.Some(10))
+  palabres.log_info("Reconfigured message")
+  use content <- read_file_logs()
+  assert string.trim_end(content)
+    == "{\"__message\":\"Reconfigured message\",\"level\":\"info\"}"
+}
+
+/// Logs written at different times must each end up on their own line.
+pub fn should_write_each_log_on_its_own_line_test() {
+  configure_file(json: False, flush: option.Some(10))
+  palabres.log_info("First message")
+  use <- test_utils.sleep(50)
+  palabres.log_info("Second message")
+  use content <- read_file_logs()
+  assert content == "level=info First message\nlevel=info Second message\n"
+}
+
+@target(javascript)
+/// A file output without `flush` must write too. On Erlang, `logger_std_h`
+/// delays the writes until the next sync, 5 seconds by default, so the test
+/// only makes sense on JavaScript.
+pub fn should_write_to_file_without_flush_interval_test() {
+  configure_file(json: False, flush: option.None)
+  palabres.log_info("Unflushed message")
+  use content <- read_file_logs()
+  assert content == "level=info Unflushed message\n"
+}
+
+/// A lazy global field logging on its own must not make the logger recurse
+/// forever: the nested log is written without global fields.
+pub fn should_not_recurse_when_a_lazy_field_logs_test() {
+  options.defaults()
+  |> options.color(False)
+  |> options.auto_at(False)
+  |> options.auto_when(False)
+  |> options.level(Debug)
+  |> options.output(to: {
+    options.file(test_utils.log_file())
+    |> options.flush(every: 10)
+  })
+  |> options.fields([
+    field.lazy(fn() {
+      palabres.log_debug("Nested message")
+      field.string("lazy", "lazy-value")
+    }),
+  ])
+  |> palabres.configure
+  palabres.log_info("Outer message")
+  use content <- read_file_logs()
+  assert content
+    == "level=debg Nested message\nlevel=info lazy=lazy-value Outer message\n"
+}
